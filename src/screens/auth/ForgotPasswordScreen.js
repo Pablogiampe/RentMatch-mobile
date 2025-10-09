@@ -18,24 +18,34 @@ import { useAuth } from "../../contexts/AuthContext"
 export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
-  const { resetPassword } = useAuth()
+  const { forgotPassword } = useAuth()
 
-  const handleResetPassword = async () => {
+  const handleForgotPassword = async () => {
     if (!email) {
       Alert.alert("Error", "Por favor ingresa tu email")
       return
     }
 
+    console.log("[ForgotPassword] start", { email })
     setLoading(true)
-    const { error } = await resetPassword(email)
-    setLoading(false)
-
-    if (error) {
-      Alert.alert("Error", error.message)
-    } else {
-      Alert.alert("Email enviado", "Revisa tu correo para restablecer tu contraseña", [
-        { text: "OK", onPress: () => navigation.navigate("Login") },
-      ])
+    try {
+      const { error } = await forgotPassword(email)
+      console.log("[ForgotPassword] response", { error })
+      if (error) {
+        Alert.alert("Error", error.message || "No se pudo enviar el email")
+      } else {
+        Alert.alert(
+          "Email enviado",
+          "Revisa tu correo para restablecer tu contraseña",
+          [{ text: "OK", onPress: () => navigation.navigate("Login") }]
+        )
+      }
+    } catch (e) {
+      console.log("[ForgotPassword] exception", e)
+      Alert.alert("Error", "Ocurrió un error inesperado")
+    } finally {
+      setLoading(false)
+      console.log("[ForgotPassword] end")
     }
   }
 
@@ -62,7 +72,7 @@ export default function ForgotPasswordScreen({ navigation }) {
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
-              onPress={handleResetPassword}
+              onPress={handleForgotPassword}
               disabled={loading}
             >
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Enviar Email</Text>}

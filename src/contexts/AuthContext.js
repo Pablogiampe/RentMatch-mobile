@@ -2,6 +2,7 @@
 
 import { createContext, useState, useEffect, useContext } from "react"
 import api from "../services/api"
+import { supabase } from "../services/supabase"
 
 const AuthContext = createContext({})
 
@@ -103,6 +104,36 @@ export const AuthProvider = ({ children }) => {
     return { data, error }
   }
 
+  const forgotPassword = async (email) => {
+    try {
+      console.log('Iniciando proceso de recuperación de contraseña con:', { email });
+
+      const response = await fetch('https://rentmatch-backend.onrender.com/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      console.log('Respuesta del servidor:', response);
+
+      const data = await response.json();
+      console.log('Datos recibidos:', data);
+
+      if (!response.ok) {
+        console.log('Error en la respuesta del servidor:', data);
+        return { data: null, error: { message: data.message || 'Error al solicitar recuperación de contraseña' } };
+      }
+
+      console.log('Recuperación de contraseña exitosa:', data);
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error en el proceso de recuperación de contraseña:', error);
+      return { data: null, error: { message: error.message || 'Error de conexión' } };
+    }
+  };
+
   const handleLogin = async (email, password) => {
     try {
       setLoading(true);
@@ -129,7 +160,8 @@ export const AuthProvider = ({ children }) => {
     signOut,
     resetPassword,
     updatePassword,
-  }
+    forgotPassword, // 👈 Agregado aquí
+  };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
