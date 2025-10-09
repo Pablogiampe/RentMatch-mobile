@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "RentMatch_mobile",
+    "slug": "RentMatch_mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./RentMatch_mobile/assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./RentMatch_mobile/assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./RentMatch_mobile/assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./RentMatch_mobile/assets/favicon.png"
+    }
+  }
+}
