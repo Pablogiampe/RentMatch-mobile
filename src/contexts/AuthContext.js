@@ -40,33 +40,35 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
+      console.log('Iniciando login con:', { email, password });
+
+      const response = await fetch('https://rentmatch-backend.onrender.com/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
-      })
+        body: JSON.stringify({ email, password }),
+      });
 
-      const data = await response.json()
+      console.log('Respuesta del servidor:', response);
+
+      const data = await response.json();
+      console.log('Datos recibidos:', data);
 
       if (!response.ok) {
-        console.log('Login error response:', data)
-        return { data: null, error: { message: data.message || 'Error en el login' } }
+        console.log('Error en la respuesta del servidor:', data);
+        return { data: null, error: { message: data.message || 'Error en el login' } };
       }
 
-      // Si el login es exitoso, actualizar el estado del usuario y sesión
-      setUser(data.user || data)
-      setSession(data.session || { user: data.user || data })
+      setUser(data.user || data);
+      setSession(data.session || { user: data.user || data });
 
-      return { data, error: null }
+      return { data, error: null };
     } catch (error) {
-      return { data: null, error: { message: error.message || 'Error de conexión' } }
+      console.error('Error en el login:', error);
+      return { data: null, error: { message: error.message || 'Error de conexión' } };
     }
-  }
+  };
 
   const signOut = async () => {
     try {

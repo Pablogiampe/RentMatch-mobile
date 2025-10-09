@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import {
   ActivityIndicator,
 } from "react-native"
 import { useAuth } from "../../contexts/AuthContext"
-import api from "../../services/api"
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("")
@@ -32,23 +31,23 @@ export default function LoginScreen({ navigation }) {
     
     try {
       console.log('Intentando login con:', email)
-      
-      // Llamada directa con axios
-      const response = await api.post('/auth/login', {
-        email,
-        password,
-      })
 
-      console.log('Response data:', response.data)
+      // Usar la lógica de signIn desde AuthContext
+      const { data, error } = await signIn(email, password)
 
-      // Login exitoso
+      if (error) {
+        console.error('Error en el login:', error.message)
+        Alert.alert('Error', error.message)
+        return
+      }
+
+      console.log('Login exitoso:', data)
       Alert.alert("Éxito", "Login exitoso!")
       // Aquí podrías navegar a la pantalla principal
       
     } catch (error) {
-      console.error('Error completo:', error)
-      const errorMessage = error.response?.data?.message || error.message || 'Error de conexión'
-      Alert.alert("Error", errorMessage)
+      console.error('Error inesperado:', error)
+      Alert.alert("Error", "Ocurrió un error inesperado. Inténtalo de nuevo.")
     }
     
     setLoading(false)
