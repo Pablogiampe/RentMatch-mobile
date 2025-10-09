@@ -33,22 +33,13 @@ export default function LoginScreen({ navigation }) {
     try {
       console.log('Intentando login con:', email)
       
-  const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email,
-          password,
-        }),
+      // Llamada directa con axios
+      const response = await api.post('/auth/login', {
+        email,
+        password,
       })
-      const data = await response.json()
-      if (!response.ok) {
-        console.log('Login error response:', data)
-        throw new Error(data.message || 'Error en el login')
-      }
-     
+
+      console.log('Response data:', response.data)
 
       // Login exitoso
       Alert.alert("Éxito", "Login exitoso!")

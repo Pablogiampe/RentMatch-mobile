@@ -40,12 +40,23 @@ export const AuthProvider = ({ children }) => {
 
   const signIn = async (email, password) => {
     try {
-      const response = await api.post('/auth/login', {
-        email,
-        password,
+      const response = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
       })
 
-      const data = response.data
+      const data = await response.json()
+
+      if (!response.ok) {
+        console.log('Login error response:', data)
+        return { data: null, error: { message: data.message || 'Error en el login' } }
+      }
 
       // Si el login es exitoso, actualizar el estado del usuario y sesión
       setUser(data.user || data)
@@ -53,13 +64,7 @@ export const AuthProvider = ({ children }) => {
 
       return { data, error: null }
     } catch (error) {
-      console.error('Login error:', error)
-      return { 
-        data: null, 
-        error: { 
-          message: error.response?.data?.message || error.message || 'Error de conexión' 
-        } 
-      }
+      return { data: null, error: { message: error.message || 'Error de conexión' } }
     }
   }
 
