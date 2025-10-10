@@ -20,10 +20,19 @@
         "foregroundImage": "./RentMatch_mobile/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.rentmatch"
     },
     "web": {
       "favicon": "./RentMatch_mobile/assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "66e51a5a-8a31-434c-85e4-879615792378"
+      }
+    },
+    "owner": "pablogiampe",
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
