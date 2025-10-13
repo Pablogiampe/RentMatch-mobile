@@ -1,18 +1,21 @@
 {
   "cli": {
-    "version": ">= 16.20.4",
+    "version": ">= 16.13.1",
     "appVersionSource": "remote"
   },
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "pnpm": "10.10.0"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "pnpm": "10.10.0"
     },
     "production": {
-      "autoIncrement": true
+      "autoIncrement": true,
+      "pnpm": "10.10.0"
     }
   },
   "submit": {
