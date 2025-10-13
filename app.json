@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "RentMatch_mobile",
-    "slug": "RentMatch_mobile",
+    "slug": "rentmatch-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./RentMatch_mobile/assets/icon.png",
@@ -20,10 +20,19 @@
         "foregroundImage": "./RentMatch_mobile/assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "package": "com.rentmatchmobile"
     },
     "web": {
       "favicon": "./RentMatch_mobile/assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "bb9ab3d6-22da-45bc-84dc-c710ad135bf3"
+      }
+    },
+    "owner": "pablogiampe100",
+    "plugins": [
+      "expo-asset"
+    ]
   }
 }
