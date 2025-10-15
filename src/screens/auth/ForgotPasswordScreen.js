@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState,useRef } from "react"
 import {
   View,
   Text,
@@ -20,6 +20,7 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const { forgotPassword } = useAuth()
+const emailRef = useRef(null);
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -71,6 +72,9 @@ export default function ForgotPasswordScreen({ navigation }) {
                 multiline={false}
                 scrollEnabled={true}
                 textContentType="emailAddress"
+                  // returnKeyType="done"
+                  // onSubmitEditing={}
+                  ref={emailRef}
               />
             </View>
           
@@ -128,21 +132,20 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     marginBottom: 20,
-    overflow: "hidden",
-    textOverflow: "horizontal",
-         shadowColor: "#000000ff",
+    borderWidth: 1,
+    borderColor: "rgba(105, 138, 238, 0.5)", 
+    borderRadius: 8,
+       shadowColor: "#8e8a8aff",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     
     shadowRadius: 4,
-    elevation: 5,
+    elevation: 3,
   },
   inputPasswordContainer: {
     height: 48, // Altura fija del contenedor
     display: "flex",
     flexDirection: "row",
-    borderWidth: 1,
-    borderColor: "rgba(105, 138, 238, 0.5)", 
     borderRadius: 8,
     backgroundColor: "#F1F4FF",
     alignItems: 'center', 
@@ -160,7 +163,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   input: {
-    height: 48, // Altura fija
     borderWidth: 1,
     color: "#5c5858ff",
     borderRadius: 8,
@@ -170,14 +172,8 @@ const styles = StyleSheet.create({
       fontSize: responsiveFontSize(1.8),
     backgroundColor: "#F1F4FF",
     borderWidth: 1,
-  borderColor: "rgba(105, 138, 238, 0.5)", // Opacidad 50%
     borderRadius: 8,
-         shadowColor: "#000000ff",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    
-    shadowRadius: 4,
-    elevation: 5,
+    borderColor: "rgba(105, 138, 238, 0.2)",
     // Propiedades para scroll horizontal
     textAlignVertical: 'center', // Android
     includeFontPadding: false, // Android
