@@ -32,7 +32,8 @@
     },
     "owner": "pablogiampe100",
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-font"
     ]
   }
 }

@@ -7,10 +7,10 @@ export default function AppStack() {
   return (
     <Stack.Navigator
       screenOptions={{
-        headerShown: true,
+        headerShown: false,
       }}
     >
-      <Stack.Screen name="Home" component={HomeScreen} options={{ title: "Inicio" }} />
+      <Stack.Screen name="Home" component={HomeScreen}  />
     </Stack.Navigator>
   )
 }
