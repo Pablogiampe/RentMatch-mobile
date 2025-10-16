@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect,useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import {
   View,
   Text,
@@ -21,8 +21,8 @@ import { useAuth } from "../../contexts/AuthContext"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
 export default function LoginScreen({ navigation }) {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
+  const [email, setEmail] = useState("pablogiampe+10@gmail.com")
+  const [password, setPassword] = useState("pablon100")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const { signIn } = useAuth()
@@ -30,9 +30,9 @@ export default function LoginScreen({ navigation }) {
   // Valores animados para el checkbox
   const checkboxScale = useState(new Animated.Value(1))[0]
   const checkboxOpacity = useState(new Animated.Value(0.7))[0]
-// Referencias para los TextInput
-const emailRef = useRef(null);
-const passwordRef = useRef(null);
+  // Referencias para los TextInput
+  const emailRef = useRef(null);
+  const passwordRef = useRef(null);
   let [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_600SemiBold,
@@ -42,7 +42,7 @@ const passwordRef = useRef(null);
   useEffect(() => {
     console.log("Show Password:", showPassword)
   }, [showPassword])
-  
+
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -61,6 +61,8 @@ const passwordRef = useRef(null);
       if (error) {
         console.error('Error en el login:', error.message)
         Alert.alert('Error', error.message)
+            setLoading(false)
+
         return
       }
 
@@ -122,52 +124,51 @@ const passwordRef = useRef(null);
 
   return (
 
-    <KeyboardAvoidingView  style={styles.container}>
+    <KeyboardAvoidingView style={styles.container}>
       <InicioSesion style={{ position: "absolute", top: 0, left: 0, }} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
-          <Text style={styles.title}>Bienvenido a RentMatch Companion</Text>
+          <Text style={styles.title}>Bienvenido a RentMatch </Text>
           <Text style={styles.subtitle}>Para continuar ingresa tu cuenta de inquilino</Text>
 
           <View style={styles.form}>
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-  placeholder="Correo Electronico"
-  value={email}
-  onChangeText={setEmail}
-  autoCapitalize="none"
-  keyboardType="email-address"
-  editable={!loading}
-  multiline={false}
-  scrollEnabled={true}
-  textContentType="emailAddress"
-  // ✅ Nuevas props para el botón del teclado
-  returnKeyType="next"
-  onSubmitEditing={() => passwordRef.current?.focus()}
-  blurOnSubmit={false}
-  ref={emailRef}
+                placeholder="Correo Electronico"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                editable={!loading}
+                multiline={false}
+                scrollEnabled={true}
+                textContentType="emailAddress"
+                // ✅ Nuevas props para el botón del teclado
+                returnKeyType="next"
+                onSubmitEditing={() => passwordRef.current?.focus()}
+                ref={emailRef}
               />
             </View>
             <View style={styles.inputPasswordContainer}>
               <TextInput
-              style={styles.inputPassword}
-  placeholder="Contraseña"
-  value={password}
-  onChangeText={setPassword}
-  secureTextEntry={!showPassword}
-  editable={!loading}
-  multiline={false}
-  scrollEnabled={true}
-  textContentType="password"
-  // ✅ Nuevas props para el botón del teclado
-  returnKeyType="done"
-  onSubmitEditing={handleLogin}
-  ref={passwordRef}
+                style={styles.inputPassword}
+                placeholder="Contraseña"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                editable={!loading}
+                multiline={false}
+                scrollEnabled={true}
+                textContentType="password"
+                // ✅ Nuevas props para el botón del teclado
+                returnKeyType="done"
+                onSubmitEditing={handleLogin}
+                ref={passwordRef}
               />
-              <TouchableOpacity 
-                style={styles.passwordButton} 
-                onPress={() => navigation.navigate("ForgotPassword")} 
+              <TouchableOpacity
+                style={styles.passwordButton}
+                onPress={() => navigation.navigate("ForgotPassword")}
                 disabled={loading}
               >
                 <Text style={styles.forgotPassword}>Recuperar</Text>
@@ -189,7 +190,7 @@ const passwordRef = useRef(null);
                   color={showPassword ? '#FF5A1F' : '#B4BEE2'}
                 />
               </Animated.View>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={handleShowPasswordToggle}
                 style={styles.checkboxTouchable}
               >
@@ -203,9 +204,9 @@ const passwordRef = useRef(null);
               disabled={loading}
             >
               {loading ? <ActivityIndicator
-                color="#314979ff" 
-                size="large" 
-                style={{ alignSelf: 'center' , marginVertical:responsiveHeight(0.5)}}
+                color="#314979ff"
+                size="large"
+                style={{ alignSelf: 'center', marginVertical: responsiveHeight(0.5) }}
               /> : <Text style={styles.buttonText}>Ingresar</Text>}
             </TouchableOpacity>
 
@@ -224,7 +225,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    
+
   },
   content: {
     flex: 1,
@@ -232,7 +233,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    fontSize: responsiveFontSize(4),
+    fontSize: responsiveFontSize(3.9),
     fontWeight: "bold",
     color: "#FF5A1F",
     marginBottom: 8,
@@ -248,12 +249,12 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     overflow: "hidden",
-    marginBottom:20,
+    marginBottom: 20,
     textOverflow: "horizontal",
-           shadowColor: "#8e8a8aff",
+    shadowColor: "#8e8a8aff",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
-    
+
     shadowRadius: 4,
     elevation: 3,
   },
@@ -262,14 +263,14 @@ const styles = StyleSheet.create({
     display: "flex",
     flexDirection: "row",
     borderWidth: 1,
-    borderColor: "rgba(105, 138, 238, 0.5)", 
+    borderColor: "rgba(105, 138, 238, 0.5)",
     borderRadius: 8,
     backgroundColor: "#F1F4FF",
-    alignItems: 'center', 
-       shadowColor: "#8e8a8aff",
+    alignItems: 'center',
+    shadowColor: "#8e8a8aff",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    
+
     shadowRadius: 4,
     elevation: 3,
   },
@@ -286,12 +287,12 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-        fontWeight: "600",
-      fontSize: responsiveFontSize(1.8),
+    fontWeight: "600",
+    fontSize: responsiveFontSize(1.8),
     backgroundColor: "#F1F4FF",
     borderWidth: 1,
-  borderColor: "rgba(105, 138, 238, 0.5)", // Opacidad 50%
-       
+    borderColor: "rgba(105, 138, 238, 0.5)", // Opacidad 50%
+
     // Propiedades para scroll horizontal
     textAlignVertical: 'center', // Android
     includeFontPadding: false, // Android
@@ -305,8 +306,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: responsiveFontSize(1.8),
     textAlignVertical: 'center',
-    includeFontPadding: false, 
-    overflow: 'hidden', 
+    includeFontPadding: false,
+    overflow: 'hidden',
   },
   passwordButton: {
     justifyContent: "flex-end",
@@ -345,7 +346,7 @@ const styles = StyleSheet.create({
   buttonText: {
     fontFamily: 'Poppins_600SemiBold',
     fontSize: responsiveFontSize(2.4),
-    marginVertical:responsiveHeight(1),
+    marginVertical: responsiveHeight(1),
     color: "#3f3d3dff",
   },
   footer: {

@@ -14,7 +14,6 @@ const Home = () => {
         <Circle cx="214" cy="-100" r="350" fill="#F8F9FF" />
 
         {/* Elipse naranja superior - extendida */}
-        <Ellipse cx="214" cy="-100" rx="280" ry="200" fill="#FF5A1F" />
 
         {/* Círculo con stroke superior derecha */}
        

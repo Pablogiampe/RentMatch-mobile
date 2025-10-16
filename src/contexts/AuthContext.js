@@ -3,6 +3,7 @@
 import { createContext, useState, useEffect, useContext } from "react"
 import api from "../services/api"
 import { supabase } from "../services/supabase"
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const AuthContext = createContext({})
 
@@ -12,32 +13,27 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar si hay una sesión guardada localmente
-    const checkStoredSession = async () => {
-      try {
-        // Aquí podrías verificar un token almacenado localmente
-        // Por ejemplo, usando AsyncStorage
-        // const token = await AsyncStorage.getItem('authToken')
-        // if (token) {
-        //   // Verificar el token con tu backend
-        //   const response = await fetch('http://localhost:5000/api/auth/verify', {
-        //     headers: { Authorization: `Bearer ${token}` }
-        //   })
-        //   if (response.ok) {
-        //     const userData = await response.json()
-        //     setUser(userData.user)
-        //     setSession({ user: userData.user, token })
-        //   }
-        // }
-        setLoading(false)
-      } catch (error) {
-        console.error('Error checking session:', error)
-        setLoading(false)
-      }
-    }
-
     checkStoredSession()
   }, [])
+
+  // ✅ Función corregida
+  const checkStoredSession = async () => {
+    try {
+      const token = await AsyncStorage.getItem('authToken')
+      const userData = await AsyncStorage.getItem('userData')
+      
+      if (token && userData) {
+        const user = JSON.parse(userData)
+        setUser(user)
+        setSession({ user, token })
+      }
+      
+      setLoading(false)
+    } catch (error) {
+      console.error('Error checking session:', error)
+      setLoading(false)
+    }
+  }
 
   const signIn = async (email, password) => {
     try {
@@ -51,18 +47,19 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
 
-      console.log('Respuesta del servidor:', response);
-
       const data = await response.json();
       console.log('Datos recibidos:', data);
 
       if (!response.ok) {
-        console.log('Error en la respuesta del servidor:', data);
         return { data: null, error: { message: data.message || 'Error en el login' } };
       }
 
-      setUser(data.user || data);
-      setSession(data.session || { user: data.user || data });
+      // ✅ Guardar datos correctamente
+      await AsyncStorage.setItem('authToken', data.access_token);
+      await AsyncStorage.setItem('userData', JSON.stringify(data.user));
+
+      setUser(data.user);
+      setSession({ user: data.user, token: data.access_token });
 
       return { data, error: null };
     } catch (error) {
@@ -73,18 +70,12 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
-      // Opcional: llamar al endpoint de logout de tu backend
-      // await fetch('http://localhost:5000/api/auth/logout', {
-      //   method: 'POST',
-      //   headers: { Authorization: `Bearer ${session?.token}` }
-      // })
-
-      // Limpiar el estado local
       setUser(null)
       setSession(null)
       
-      // Opcional: limpiar AsyncStorage
-      // await AsyncStorage.removeItem('authToken')
+      // ✅ Limpiar ambos items
+      await AsyncStorage.removeItem('authToken')
+      await AsyncStorage.removeItem('userData')
 
       return { error: null }
     } catch (error) {
@@ -116,39 +107,17 @@ export const AuthProvider = ({ children }) => {
         body: JSON.stringify({ email }),
       });
 
-      console.log('Respuesta del servidor:', response);
-
       const data = await response.json();
       console.log('Datos recibidos:', data);
 
       if (!response.ok) {
-        console.log('Error en la respuesta del servidor:', data);
         return { data: null, error: { message: data.message || 'Error al solicitar recuperación de contraseña' } };
       }
 
-      console.log('Recuperación de contraseña exitosa:', data);
       return { data, error: null };
     } catch (error) {
       console.error('Error en el proceso de recuperación de contraseña:', error);
       return { data: null, error: { message: error.message || 'Error de conexión' } };
-    }
-  };
-
-  const handleLogin = async (email, password) => {
-    try {
-      setLoading(true);
-      const response = await signIn(email, password);
-      // Manejar respuesta exitosa
-    } catch (error) {
-      console.error('Login error:', error);
-      // Mostrar error al usuario de manera más específica
-      if (error.message === 'Network request failed') {
-        setError('Error de conexión. Verifica tu conexión a internet.');
-      } else {
-        setError('Error al iniciar sesión. Verifica tus credenciales.');
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -160,7 +129,7 @@ export const AuthProvider = ({ children }) => {
     signOut,
     resetPassword,
     updatePassword,
-    forgotPassword, // 👈 Agregado aquí
+    forgotPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
