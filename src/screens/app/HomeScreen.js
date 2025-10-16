@@ -12,7 +12,7 @@ export default function HomeScreen() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showArrow, setShowArrow] = useState(true) // ✅ Cambiar de false a true
   // 1. CAMBIO: El valor inicial ahora es más chico
-  const animatedHeight = useRef(new Animated.Value(responsiveHeight(5))).current
+  const animatedHeight = useRef(new Animated.Value(responsiveHeight(7))).current
   const arrowRotation = useRef(new Animated.Value(0)).current
   const scrollY = useRef(0)
 
@@ -46,7 +46,7 @@ export default function HomeScreen() {
     Animated.parallel([
       Animated.spring(animatedHeight, {
         // 2. CAMBIO: El valor contraído ahora es 10
-        toValue: newExpandedState ? responsiveHeight(60) : responsiveHeight(5),
+        toValue: newExpandedState ? responsiveHeight(60) : responsiveHeight(7),
         useNativeDriver: false,
         tension: 50,
         friction: 7,
@@ -93,44 +93,34 @@ export default function HomeScreen() {
         {isExpanded && (
           <View style={styles.menuContent}>
             <View style={styles.row}>
+             
               <TouchableOpacity style={{...styles.logoutButton, width: "33%"}} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
+                <View style={{ ...styles.iconContainer, backgroundColor: "#f2edee" }}>
+                  <IconComponent name="profile" />
                 </View>
-                <Text style={styles.logoutText}>Alquileres</Text>
+                <Text style={styles.logoutText}>Mi perfil</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={{...styles.logoutButton, width: "33%"}} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
-                </View>
-                <Text style={styles.logoutText}>Mis Datos</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={{...styles.logoutButton, width: "33%"}} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
-                </View>
-                <Text style={styles.logoutText}>Mis Datos</Text>
-              </TouchableOpacity>
+            
             </View>
             <View style={styles.row}>
               <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
+                <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f" }}>
+                  <IconComponent name="calendar" />
                 </View>
                 <Text style={styles.logoutText}>Reportar Incidencias</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
+                <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0" }}>
+                  <IconComponent name="home" />
                 </View>
                 <Text style={styles.logoutText}>Estado final</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.row}>
               <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
+                <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951" }}>
+                  <IconComponent name="inspection" />
                 </View>
                 <Text style={styles.logoutText}>Solicitar peritaje</Text>
               </TouchableOpacity>
@@ -144,8 +134,8 @@ export default function HomeScreen() {
             </View>
              <View style={styles.row}>
               <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
+                <View style={{ ...styles.iconContainer, backgroundColor: "white",borderRadius:50 }}>
+                  <IconComponent name="logout" />
                 </View>
                 <Text style={styles.logoutText}>Cerrar Sesión</Text>
               </TouchableOpacity>
@@ -170,25 +160,25 @@ export default function HomeScreen() {
           {/* ... El resto de tu contenido no cambia ... */}
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>⚠️</Text>
+              <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f" ,borderRadius:50}}>
+              <IconComponent name="calendar" />
               </View>
               <Text style={styles.optionTitle}>Reportar</Text>
               <Text style={styles.optionSubtitle}>Incidencias</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>📋</Text>
+              <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0" ,borderRadius:50}}>
+              <IconComponent name="home" />
               </View>
               <Text style={styles.optionTitle}>Registrar</Text>
               <Text style={styles.optionSubtitle}>Estado inicial</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard}>
-              <View style={styles.iconContainer}>
-                <Text style={styles.iconText}>📄</Text>
-              </View>
+              <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951" ,borderRadius:50}}>
+              <IconComponent name="inspection" />
+</View>
               <Text style={styles.optionTitle}>Solicitar</Text>
               <Text style={styles.optionSubtitle}>peritaje</Text>
             </TouchableOpacity>
@@ -215,8 +205,40 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.rentalCard}>
+              <Text style={styles.rentalTitle}>Casa en Ramos Mejia</Text>
+              <Text style={styles.rentalDate}>Fecha Inicio: 1/6/2025 </Text>
+              <Text style={styles.rentalPrice}>Presupuesto: $550.000/mes</Text>
+              <Text style={styles.rentalLocation}>Ubicación: Ramos Mejia</Text>
+              <Text style={styles.rentalDetails}>Ambientes: 2</Text>
+              <Text style={styles.rentalContacts}>Contactos: 3 propietarios</Text>
+
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={styles.notificationButton}>
+                <IconComponent name="bell" />
+                </TouchableOpacity>
+                
+              </View>
+            </View>
+            
+            <View style={styles.rentalCard}>
+              <Text style={styles.rentalTitle}>PH en Chacarita</Text>
+              <Text style={styles.rentalDate}>Fecha Inicio: 1/12/2024 </Text>
+              <Text style={styles.rentalPrice}>Presupuesto: $350.000/mes</Text>
+              <Text style={styles.rentalLocation}>Ubicación: Chacarita</Text>
+              <Text style={styles.rentalDetails}>Ambientes: 4</Text>
+              <Text style={styles.rentalContacts}>Contactos: 1 propietario</Text>
+
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={styles.notificationButton}>
+                <IconComponent name="bell" />
+                </TouchableOpacity>
+              
+              </View>
+            </View>
+            
+            <View style={styles.rentalCard}>
               <Text style={styles.rentalTitle}>Apartamento en Belgrano</Text>
-              <Text style={styles.rentalDate}>Publicado hace 3 días</Text>
+              <Text style={styles.rentalDate}>Fecha Inicio: 1/6/2024 </Text>
               <Text style={styles.rentalPrice}>Presupuesto: $350.000/mes</Text>
               <Text style={styles.rentalLocation}>Ubicación: Belgrano</Text>
               <Text style={styles.rentalDetails}>Ambientes: 2</Text>
@@ -224,10 +246,23 @@ export default function HomeScreen() {
 
               <View style={styles.actionButtons}>
                 <TouchableOpacity style={styles.notificationButton}>
-                  <Text style={styles.actionIcon}>🔔</Text>
+                <IconComponent name="bell" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.chatButton}>
-                  <Text style={styles.actionIcon}>💬</Text>
+              
+              </View>
+            </View>
+            
+            <View style={styles.rentalCard}>
+              <Text style={styles.rentalTitle}>Apartamento en Caballito</Text>
+              <Text style={styles.rentalDate}>Fecha Inicio: 1/2/2025 </Text>
+              <Text style={styles.rentalPrice}>Cuota Mensual: $700.000/mes</Text>
+              <Text style={styles.rentalLocation}>Ubicación: Caballito</Text>
+              <Text style={styles.rentalDetails}>Ambientes: 3</Text>
+              <Text style={styles.rentalContacts}>Contactos: 2 propietarios</Text>
+
+              <View style={styles.actionButtons}>
+                <TouchableOpacity style={styles.notificationButton}>
+                <IconComponent name="bell" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -385,10 +420,11 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(6),
     justifyContent: "center",
     alignItems: "center",
+
     marginBottom: responsiveHeight(1),
   },
   iconText: {
-    fontSize: responsiveFontSize(3),
+    fontSize: responsiveFontSize(5),
   },
   optionTitle: {
     fontSize: responsiveFontSize(1.8),
@@ -436,7 +472,9 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
   },
   rentalCard: {
-    backgroundColor: "#F8F9FF",
+    display: "flex",
+    marginBottom: responsiveHeight(2),
+    backgroundColor: "#F1F4FF",
     borderRadius: 12,
     padding: responsiveWidth(4),
     shadowColor: "#000",
