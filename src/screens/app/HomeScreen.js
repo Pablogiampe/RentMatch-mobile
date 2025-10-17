@@ -1,16 +1,24 @@
 "use client"
-import { useState, useRef } from "react"
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated } from "react-native"
+import { useState, useRef, useEffect } from "react"
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator } from "react-native"
 import IconComponent from "../../../RentMatch_mobile/assets/icons" // Asegúrate de que esta ruta sea correcta
 import { useAuth } from "../../contexts/AuthContext" // Asegúrate de que esta ruta sea correcta
+import { useRental } from "../../contexts/RentalContext" // Asegúrate de que esta ruta sea correcta
 import Home from "../../../RentMatch_mobile/assets/home"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 
 export default function HomeScreen() {
   const { user, signOut } = useAuth()
+   
+  // ✅ Manejo seguro del contexto
+   const rentalContext = useRental()
+  const { activeRentals = [], rentalHistory = [], loading = false, error = null, loadRentals } = rentalContext || {}
+  
   const [isExpanded, setIsExpanded] = useState(false)
   const [showArrow, setShowArrow] = useState(true) // ✅ Cambiar de false a true
+  const [activeTab, setActiveTab] = useState("active") // "active" o "history"
+
   // 1. CAMBIO: El valor inicial ahora es más chico
   const animatedHeight = useRef(new Animated.Value(responsiveHeight(7))).current
   const arrowRotation = useRef(new Animated.Value(0)).current
@@ -26,8 +34,30 @@ export default function HomeScreen() {
     Poppins_700Bold,
   })
 
+   useEffect(() => {
+    if (user?.id && loadRentals) {
+      console.log("Cargando alquileres para el usuario:", user.id)
+       if (loadRentals) loadRentals()
+    } else {
+      console.log("No se puede cargar alquileres:", { userId: user?.id, loadRentalsExists: !!loadRentals })
+    }
+  }, [user?.id])
+
+
   if (!fontsLoaded) {
     return null
+  }
+
+  // ✅ Verificar si el contexto está disponible
+  if (!rentalContext) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>Error: RentalContext no está disponible</Text>
+          <Text style={styles.errorSubText}>Asegúrate de envolver tu app con RentalProvider</Text>
+        </View>
+      </View>
+    )
   }
 
   const firstName = user?.full_name.split(" ")[0]
@@ -63,6 +93,8 @@ export default function HomeScreen() {
     inputRange: [0, 1],
     outputRange: ["0deg", "180deg"],
   })
+  
+  const rentalsToShow = activeTab === "active" ? activeRentals : rentalHistory
 
   return (
     <View style={styles.container}>
@@ -178,7 +210,7 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.optionCard}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951" ,borderRadius:50}}>
               <IconComponent name="inspection" />
-</View>
+              </View>
               <Text style={styles.optionTitle}>Solicitar</Text>
               <Text style={styles.optionSubtitle}>peritaje</Text>
             </TouchableOpacity>
@@ -192,80 +224,90 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
+           {/* ✅ SECCIÓN DE ALQUILERES CON DATOS DEL BACKEND */}
           <View style={styles.rentalsSection}>
             <Text style={styles.sectionTitle}>Mis Alquileres</Text>
 
             <View style={styles.tabsContainer}>
-              <TouchableOpacity style={[styles.tab, styles.activeTab]}>
-                <Text style={[styles.tabText, styles.activeTabText]}>Activos</Text>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'active' && styles.activeTab]}
+                onPress={() => setActiveTab('active')}
+              >
+                <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>
+                  Activos ({activeRentals.length})
+                </Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.tab}>
-                <Text style={styles.tabText}>Historial</Text>
+              <TouchableOpacity 
+                style={[styles.tab, activeTab === 'history' && styles.activeTab]}
+                onPress={() => setActiveTab('history')}
+              >
+                <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
+                  Historial ({rentalHistory.length})
+                </Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.rentalCard}>
-              <Text style={styles.rentalTitle}>Casa en Ramos Mejia</Text>
-              <Text style={styles.rentalDate}>Fecha Inicio: 1/6/2025 </Text>
-              <Text style={styles.rentalPrice}>Presupuesto: $550.000/mes</Text>
-              <Text style={styles.rentalLocation}>Ubicación: Ramos Mejia</Text>
-              <Text style={styles.rentalDetails}>Ambientes: 2</Text>
-              <Text style={styles.rentalContacts}>Contactos: 3 propietarios</Text>
-
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.notificationButton}>
-                <IconComponent name="bell" />
-                </TouchableOpacity>
-                
+            {loading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#FF5A1F" />
+                <Text style={styles.loadingText}>Cargando alquileres...</Text>
               </View>
-            </View>
-            
-            <View style={styles.rentalCard}>
-              <Text style={styles.rentalTitle}>PH en Chacarita</Text>
-              <Text style={styles.rentalDate}>Fecha Inicio: 1/12/2024 </Text>
-              <Text style={styles.rentalPrice}>Presupuesto: $350.000/mes</Text>
-              <Text style={styles.rentalLocation}>Ubicación: Chacarita</Text>
-              <Text style={styles.rentalDetails}>Ambientes: 4</Text>
-              <Text style={styles.rentalContacts}>Contactos: 1 propietario</Text>
-
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.notificationButton}>
-                <IconComponent name="bell" />
+            ) : error ? (
+              <View style={styles.errorContainer}>
+                <IconComponent name="alert-circle" style={styles.errorIcon} />
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity 
+                  style={styles.retryButton}
+                  onPress={() => loadRentals && loadRentals(user.id)}
+                >
+                  <Text style={styles.retryButtonText}>Reintentar</Text>
                 </TouchableOpacity>
               
               </View>
-            </View>
-            
-            <View style={styles.rentalCard}>
-              <Text style={styles.rentalTitle}>Apartamento en Belgrano</Text>
-              <Text style={styles.rentalDate}>Fecha Inicio: 1/6/2024 </Text>
-              <Text style={styles.rentalPrice}>Presupuesto: $350.000/mes</Text>
-              <Text style={styles.rentalLocation}>Ubicación: Belgrano</Text>
-              <Text style={styles.rentalDetails}>Ambientes: 2</Text>
-              <Text style={styles.rentalContacts}>Contactos: 5 propietarios</Text>
-
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.notificationButton}>
-                <IconComponent name="bell" />
-                </TouchableOpacity>
-              
+            ) : rentalsToShow.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <IconComponent name="home" style={styles.emptyIcon} />
+                <Text style={styles.emptyText}>
+                  {activeTab === 'active'
+                    ? 'No tienes alquileres activos'
+                    : 'No hay historial de alquileres'}
+                </Text>
               </View>
-            </View>
-            
-            <View style={styles.rentalCard}>
-              <Text style={styles.rentalTitle}>Apartamento en Caballito</Text>
-              <Text style={styles.rentalDate}>Fecha Inicio: 1/2/2025 </Text>
-              <Text style={styles.rentalPrice}>Cuota Mensual: $700.000/mes</Text>
-              <Text style={styles.rentalLocation}>Ubicación: Caballito</Text>
-              <Text style={styles.rentalDetails}>Ambientes: 3</Text>
-              <Text style={styles.rentalContacts}>Contactos: 2 propietarios</Text>
+            ) : (
+              rentalsToShow.map((rental) => (
+                <View key={rental.id} style={styles.rentalCard}>
+                  <Text style={styles.rentalTitle}>
+                    {rental.property_title || rental.titulo_propiedad || 'Propiedad'}
+                  </Text>
+                  <Text style={styles.rentalDate}>
+                    Fecha Inicio: {new Date(rental.start_date || rental.fecha_inicio).toLocaleDateString('es-AR')}
+                  </Text>
+                  {(rental.end_date || rental.fecha_fin) && (
+                    <Text style={styles.rentalDate}>
+                      Fecha Fin: {new Date(rental.end_date || rental.fecha_fin).toLocaleDateString('es-AR')}
+                    </Text>
+                  )}
+                  <Text style={styles.rentalPrice}>
+                    Presupuesto: ${(rental.monthly_rent || rental.precio_mensual || 0).toLocaleString('es-AR')}/mes
+                  </Text>
+                  <Text style={styles.rentalLocation}>
+                    Ubicación: {rental.property_location || rental.ubicacion || 'No especificada'}
+                  </Text>
+                  <Text style={styles.rentalDetails}>
+                    Ambientes: {rental.property_rooms || rental.ambientes || 0}
+                  </Text>
+                  <Text style={styles.rentalContacts}>
+                    Contactos: {rental.contact_count || rental.cantidad_contactos || 0} propietario(s)
+                  </Text>
 
-              <View style={styles.actionButtons}>
-                <TouchableOpacity style={styles.notificationButton}>
-                <IconComponent name="bell" />
-                </TouchableOpacity>
-              </View>
-            </View>
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity style={styles.notificationButton}>
+                      <IconComponent name="bell" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            )}
           </View>
 
 
@@ -553,5 +595,73 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: responsiveFontSize(2),
     fontWeight: "600",
+  },
+  container: {
+    flex: 1,
+    backgroundColor: "#fff",
+  },
+  // ✅ Nuevos estilos para mensajes de error
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: responsiveHeight(4),
+  },
+  errorText: {
+    fontSize: responsiveFontSize(2),
+    color: '#FF5A1F',
+    fontFamily: 'Poppins_600SemiBold',
+    textAlign: 'center',
+    marginBottom: responsiveHeight(1),
+  },
+  errorSubText: {
+    fontSize: responsiveFontSize(1.6),
+    color: '#666',
+    fontFamily: 'Poppins_400Regular',
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    padding: responsiveHeight(4),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: responsiveHeight(2),
+    fontSize: responsiveFontSize(1.8),
+    color: '#666',
+    fontFamily: 'Poppins_400Regular',
+  },
+  errorIcon: {
+    fontSize: responsiveFontSize(6),
+    color: '#FF5A1F',
+    marginBottom: responsiveHeight(1),
+  },
+  retryButton: {
+    backgroundColor: '#FF5A1F',
+    paddingVertical: responsiveHeight(1.5),
+    paddingHorizontal: responsiveWidth(6),
+    borderRadius: 8,
+    marginTop: responsiveHeight(2),
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: responsiveFontSize(1.8),
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  emptyContainer: {
+    padding: responsiveHeight(6),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyIcon: {
+    fontSize: responsiveFontSize(8),
+    color: '#B4BEE2',
+    marginBottom: responsiveHeight(2),
+  },
+  emptyText: {
+    fontSize: responsiveFontSize(1.8),
+    color: '#666',
+    fontFamily: 'Poppins_400Regular',
+    textAlign: 'center',
   },
 })

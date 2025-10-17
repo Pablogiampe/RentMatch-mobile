@@ -7,7 +7,6 @@ import AppStack from "./AppStack"
 
 export default function Navigation() {
   const { user, loading } = useAuth()
-
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -15,15 +14,10 @@ export default function Navigation() {
       </View>
     )
   }
-
-  return <NavigationContainer>{user ? <AppStack /> : <AuthStack />}</NavigationContainer>
+  return (
+    <NavigationContainer>
+      {user ? <AppStack /> : <AuthStack />}
+    </NavigationContainer>
+  )
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#fff",
-  },
-})
+const styles = StyleSheet.create({ loadingContainer:{ flex:1, justifyContent:"center", alignItems:"center" }})
