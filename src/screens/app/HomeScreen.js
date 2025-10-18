@@ -1,25 +1,75 @@
 "use client"
 import { useState, useRef, useEffect } from "react"
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator } from "react-native"
-import IconComponent from "../../../RentMatch_mobile/assets/icons" // Asegúrate de que esta ruta sea correcta
-import { useAuth } from "../../contexts/AuthContext" // Asegúrate de que esta ruta sea correcta
-import { useRental } from "../../contexts/RentalContext" // Asegúrate de que esta ruta sea correcta
+import IconComponent from "../../../RentMatch_mobile/assets/icons"
+import { useAuth } from "../../contexts/AuthContext"
+import { useRental } from "../../contexts/RentalContext"
 import Home from "../../../RentMatch_mobile/assets/home"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 
 export default function HomeScreen() {
   const { user, signOut } = useAuth()
-   
-  // ✅ Manejo seguro del contexto
-   const rentalContext = useRental()
-  const { activeRentals = [], rentalHistory = [], loading = false, error = null, loadRentals } = rentalContext || {}
+  const rentalContext = useRental()
+  
+  // ✅ FIX: Leer datos directamente del nivel raíz (como viene en Postman)
+  const getProp = (r) => {
+    return {
+      type: r.property_type || "Propiedad",
+      address: r.address || "Sin dirección",
+      neighborhood: r.neighborhood || "Sin barrio",
+      city: r.city || "Sin ciudad",
+      rooms: r.rooms || 0,
+      bathrooms: r.bathrooms || 0,
+      price: r.rent_amount || 0,
+      currency: r.rent_currency || "ARS",
+      furnished: r.furnished || false,
+      pets_allowed: r.pets_allowed || false,
+      amenities: r.amenities || [],
+      notes: r.notes || "",
+    }
+  }
+  
+  const {
+    activeRentals = [],
+    rentalHistory = [],
+    loading = false,
+    error = null,
+    loadRentals,
+  } = rentalContext || {}
+  
+  const formatDate = (d) => {
+    if (!d) return "—"
+    try {
+      return new Date(d).toLocaleDateString("es-AR", {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      })
+    } catch {
+      return "—"
+    }
+  }
+  
+  const capitalize = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "")
+  
+  const formatCurrency = (value, currency = "ARS") => {
+    if (value == null || value === 0) return "—"
+    try {
+      return new Intl.NumberFormat("es-AR", { 
+        style: "currency", 
+        currency, 
+        maximumFractionDigits: 0 
+      }).format(value)
+    } catch {
+      return `${currency} ${Number(value).toLocaleString("es-AR")}`
+    }
+  }
   
   const [isExpanded, setIsExpanded] = useState(false)
-  const [showArrow, setShowArrow] = useState(true) // ✅ Cambiar de false a true
-  const [activeTab, setActiveTab] = useState("active") // "active" o "history"
+  const [showArrow, setShowArrow] = useState(true)
+  const [activeTab, setActiveTab] = useState("active")
 
-  // 1. CAMBIO: El valor inicial ahora es más chico
   const animatedHeight = useRef(new Animated.Value(responsiveHeight(7))).current
   const arrowRotation = useRef(new Animated.Value(0)).current
   const scrollY = useRef(0)
@@ -34,21 +84,17 @@ export default function HomeScreen() {
     Poppins_700Bold,
   })
 
-   useEffect(() => {
-    if (user?.id && loadRentals) {
+  useEffect(() => {
+    if (user?.id) {
       console.log("Cargando alquileres para el usuario:", user.id)
-       if (loadRentals) loadRentals()
-    } else {
-      console.log("No se puede cargar alquileres:", { userId: user?.id, loadRentalsExists: !!loadRentals })
+      loadRentals()
     }
   }, [user?.id])
-
 
   if (!fontsLoaded) {
     return null
   }
 
-  // ✅ Verificar si el contexto está disponible
   if (!rentalContext) {
     return (
       <View style={styles.container}>
@@ -60,13 +106,11 @@ export default function HomeScreen() {
     )
   }
 
-  const firstName = user?.full_name.split(" ")[0]
+  const firstName = user?.full_name?.split(" ")[0]
 
-  // ✅ 2. Simplificar el handleScroll completamente
   const handleScroll = (event) => {
     const currentScrollY = event.nativeEvent.contentOffset.y
     scrollY.current = currentScrollY
-    // ✅ Ya no necesitamos animaciones aquí - la flecha siempre está visible
   }
 
   const toggleExpand = () => {
@@ -75,7 +119,6 @@ export default function HomeScreen() {
 
     Animated.parallel([
       Animated.spring(animatedHeight, {
-        // 2. CAMBIO: El valor contraído ahora es 10
         toValue: newExpandedState ? responsiveHeight(60) : responsiveHeight(7),
         useNativeDriver: false,
         tension: 50,
@@ -98,7 +141,7 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
-      <Home style={{ position: "absolute", top: 0, left: 0, }} />
+      <Home style={{ position: "absolute", top: 0, left: 0 }} />
       <Animated.View
         style={[
           styles.stickyHeader,
@@ -115,7 +158,6 @@ export default function HomeScreen() {
           <Animated.View style={[styles.arrowButtonContainer]}>
             <TouchableOpacity style={styles.arrowButton} onPress={toggleExpand} activeOpacity={0.7}>
               <Animated.Text style={[styles.arrowIcon, { transform: [{ rotate: arrowRotate }] }]}>
-
                 <IconComponent name="arrow-down" />
               </Animated.Text>
             </TouchableOpacity>
@@ -125,14 +167,12 @@ export default function HomeScreen() {
         {isExpanded && (
           <View style={styles.menuContent}>
             <View style={styles.row}>
-             
               <TouchableOpacity style={{...styles.logoutButton, width: "33%"}} onPress={handleSignOut}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#f2edee" }}>
                   <IconComponent name="profile" />
                 </View>
                 <Text style={styles.logoutText}>Mi perfil</Text>
               </TouchableOpacity>
-            
             </View>
             <View style={styles.row}>
               <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={handleSignOut}>
@@ -162,18 +202,16 @@ export default function HomeScreen() {
                 </View>
                 <Text style={styles.logoutText}>Estado inicial</Text>
               </TouchableOpacity>
-              
             </View>
-             <View style={styles.row}>
+            <View style={styles.row}>
               <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "white",borderRadius:50 }}>
+                <View style={{ ...styles.iconContainer, backgroundColor: "white", borderRadius: 50 }}>
                   <IconComponent name="logout" />
                 </View>
                 <Text style={styles.logoutText}>Cerrar Sesión</Text>
               </TouchableOpacity>
-              
             </View>
-            </View>
+          </View>
         )}
       </Animated.View>
 
@@ -189,27 +227,26 @@ export default function HomeScreen() {
             <Text style={styles.question}>¿Qué deseas hacer hoy?</Text>
           </View>
 
-          {/* ... El resto de tu contenido no cambia ... */}
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard}>
-              <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f" ,borderRadius:50}}>
-              <IconComponent name="calendar" />
+              <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f", borderRadius: 50 }}>
+                <IconComponent name="calendar" />
               </View>
               <Text style={styles.optionTitle}>Reportar</Text>
               <Text style={styles.optionSubtitle}>Incidencias</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard}>
-              <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0" ,borderRadius:50}}>
-              <IconComponent name="home" />
+              <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0", borderRadius: 50 }}>
+                <IconComponent name="home" />
               </View>
               <Text style={styles.optionTitle}>Registrar</Text>
               <Text style={styles.optionSubtitle}>Estado inicial</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard}>
-              <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951" ,borderRadius:50}}>
-              <IconComponent name="inspection" />
+              <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951", borderRadius: 50 }}>
+                <IconComponent name="inspection" />
               </View>
               <Text style={styles.optionTitle}>Solicitar</Text>
               <Text style={styles.optionSubtitle}>peritaje</Text>
@@ -224,7 +261,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-           {/* ✅ SECCIÓN DE ALQUILERES CON DATOS DEL BACKEND */}
           <View style={styles.rentalsSection}>
             <Text style={styles.sectionTitle}>Mis Alquileres</Text>
 
@@ -258,11 +294,10 @@ export default function HomeScreen() {
                 <Text style={styles.errorText}>{error}</Text>
                 <TouchableOpacity 
                   style={styles.retryButton}
-                  onPress={() => loadRentals && loadRentals(user.id)}
+                  onPress={() => loadRentals?.()}
                 >
                   <Text style={styles.retryButtonText}>Reintentar</Text>
                 </TouchableOpacity>
-              
               </View>
             ) : rentalsToShow.length === 0 ? (
               <View style={styles.emptyContainer}>
@@ -274,46 +309,49 @@ export default function HomeScreen() {
                 </Text>
               </View>
             ) : (
-              rentalsToShow.map((rental) => ( // Eliminar las llaves aquí
-                <View key={rental.id} style={styles.rentalCard}>
-                  <Text style={styles.rentalTitle}>
-                  {rental.property_title || rental.titulo_propiedad || 'Propiedad'}
-                </Text>
-                  <Text style={styles.rentalDate}>
-                    Fecha Inicio: {new Date(rental.start_date || rental.fecha_inicio).toLocaleDateString('es-AR')}
-                  </Text>
-                  {(rental.end_date || rental.fecha_fin) && (
-                    <Text style={styles.rentalDate}>
-                      Fecha Fin: {new Date(rental.end_date || rental.fecha_fin).toLocaleDateString('es-AR')}
-                    </Text>
-                  )}
-                  <Text style={styles.rentalPrice}>
-                    Presupuesto: ${(rental.monthly_rent || rental.precio_mensual || 0).toLocaleString('es-AR')}/mes
-                  </Text>
-                  <Text style={styles.rentalLocation}>
-                    Ubicación: {rental.property_location || rental.ubicacion || 'No especificada'}
-                  </Text>
-                  <Text style={styles.rentalDetails}>
-                    Ambientes: {rental.property_rooms || rental.ambientes || 0}
-                  </Text>
-                  <Text style={styles.rentalContacts}>
-                    Contactos: {rental.contact_count || rental.cantidad_contactos || 0} propietario(s)
-                  </Text>
+              rentalsToShow.map((rental) => {
+                const p = getProp(rental)
+                // ✅ Título con tipo de propiedad · barrio
+                const title = `${capitalize(p.type)} · ${p.neighborhood}`
+                // ✅ Ubicación completa: dirección, barrio, ciudad
+                const ubicacion = [p.address, p.neighborhood, p.city].filter(Boolean).join(", ")
 
-                  <View style={styles.actionButtons}>
-                    <TouchableOpacity style={styles.notificationButton}>
-                      <IconComponent name="bell" />
-                    </TouchableOpacity>
+                return (
+                  <View key={rental.contract_id || rental.id} style={styles.rentalCard}>
+                    <Text style={styles.rentalTitle}>{title}</Text>
+                    <Text style={styles.rentalLocation}>Ubicación: {ubicacion}</Text>
+                    <Text style={styles.rentalDate}>Fecha Inicio: {formatDate(rental.start_date)}</Text>
+                    {rental.end_date && (
+                      <Text style={styles.rentalDate}>Fecha Fin: {formatDate(rental.end_date)}</Text>
+                    )}
+                    <Text style={styles.rentalPrice}>Presupuesto: {formatCurrency(p.price, p.currency)}</Text>
+                    <Text style={styles.rentalDetails}>Ambientes: {p.rooms}</Text>
+                    <Text style={styles.rentalDetails}>Baños: {p.bathrooms}</Text>
+                    <Text style={styles.rentalDetails}>Estado: {capitalize(rental.status)}</Text>
+                    {p.furnished && (
+                      <Text style={styles.rentalDetails}>✅ Amueblado</Text>
+                    )}
+                    {p.pets_allowed && (
+                      <Text style={styles.rentalDetails}>🐕 Mascotas permitidas</Text>
+                    )}
+                    {p.amenities.length > 0 && (
+                      <Text style={styles.rentalDetails}>
+                        Amenities: {p.amenities.join(", ")}
+                      </Text>
+                    )}
+                    {p.notes && (
+                      <Text style={styles.rentalNotes}>Nota: {p.notes}</Text>
+                    )}
+                    <View style={styles.actionButtons}>
+                      <TouchableOpacity style={styles.notificationButton}>
+                        <IconComponent name="bell" />
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-
-                
-              ))
-
+                )
+              })
             )}
           </View>
-
-
         </View>
       </ScrollView>
     </View>
@@ -344,7 +382,7 @@ const styles = StyleSheet.create({
   },
   arrowButtonContainer: {
     position: "absolute",
-    bottom: responsiveHeight(1), // Pequeño ajuste para que se vea mejor
+    bottom: responsiveHeight(1),
     left: 0,
     right: 0,
     alignItems: "center",
@@ -356,7 +394,6 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(6),
     justifyContent: "center",
     alignItems: "center",
-
   },
   arrowIcon: {
     fontSize: responsiveFontSize(5),
@@ -372,7 +409,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     display: "flex",
     flexDirection: "column",
-    top: responsiveHeight(8), // Ajustado para que el contenido aparezca un poco más arriba
+    top: responsiveHeight(8),
     left: 0,
     right: 0,
     bottom: 0,
@@ -380,32 +417,14 @@ const styles = StyleSheet.create({
     zIndex: 5,
   },
   row: {
-    
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     gap: responsiveWidth(6),
     marginBottom: responsiveHeight(2),
   },
-  firstRow: {
-    width: "33%",
-  },
-  secondRow: {
-    width: "50%",
-  },
-  thirdRow: {
-    width: "50%",
-  },
-
-  menuPlaceholder: {
-    fontSize: responsiveFontSize(2),
-    color: "#fff",
-    textAlign: "center",
-    fontFamily: "Poppins_600SemiBold",
-  },
   scrollContent: {
     flexGrow: 1,
-    // 3. CAMBIO: El padding ahora coincide con la nueva altura
     paddingTop: responsiveHeight(10),
   },
   content: {
@@ -415,7 +434,6 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: responsiveHeight(3),
   },
-  // ... El resto de tus estilos no cambian
   greeting: {
     fontSize: responsiveFontSize(2.8),
     fontFamily: "Poppins_600SemiBold",
@@ -465,11 +483,7 @@ const styles = StyleSheet.create({
     borderRadius: responsiveWidth(6),
     justifyContent: "center",
     alignItems: "center",
-
     marginBottom: responsiveHeight(1),
-  },
-  iconText: {
-    fontSize: responsiveFontSize(5),
   },
   optionTitle: {
     fontSize: responsiveFontSize(1.8),
@@ -517,7 +531,6 @@ const styles = StyleSheet.create({
     fontFamily: "Poppins_600SemiBold",
   },
   rentalCard: {
-    display: "flex",
     marginBottom: responsiveHeight(2),
     backgroundColor: "#F1F4FF",
     borderRadius: 12,
@@ -534,32 +547,39 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#333",
     marginBottom: responsiveHeight(0.5),
+    fontFamily: "Poppins_600SemiBold",
   },
   rentalDate: {
     fontSize: responsiveFontSize(1.6),
     color: "#666",
-    marginBottom: responsiveHeight(1),
+    marginBottom: responsiveHeight(0.5),
+    fontFamily: "Poppins_400Regular",
   },
   rentalPrice: {
     fontSize: responsiveFontSize(1.8),
-    color: "#333",
-    fontWeight: "500",
-    marginBottom: responsiveHeight(0.3),
+    color: "#FF5A1F",
+    fontWeight: "600",
+    marginBottom: responsiveHeight(0.5),
+    fontFamily: "Poppins_600SemiBold",
   },
   rentalLocation: {
-    fontSize: responsiveFontSize(1.8),
-    color: "#333",
-    marginBottom: responsiveHeight(0.3),
+    fontSize: responsiveFontSize(1.6),
+    color: "#666",
+    marginBottom: responsiveHeight(0.5),
+    fontFamily: "Poppins_400Regular",
   },
   rentalDetails: {
-    fontSize: responsiveFontSize(1.8),
-    color: "#333",
+    fontSize: responsiveFontSize(1.6),
+    color: "#666",
     marginBottom: responsiveHeight(0.3),
+    fontFamily: "Poppins_400Regular",
   },
-  rentalContacts: {
-    fontSize: responsiveFontSize(1.8),
-    color: "#333",
-    marginBottom: responsiveHeight(1),
+  rentalNotes: {
+    fontSize: responsiveFontSize(1.5),
+    color: "#999",
+    fontStyle: "italic",
+    marginTop: responsiveHeight(0.5),
+    fontFamily: "Poppins_400Regular",
   },
   actionButtons: {
     position: "absolute",
@@ -576,21 +596,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: responsiveWidth(2),
   },
-  chatButton: {
-    width: responsiveWidth(10),
-    height: responsiveWidth(10),
-    backgroundColor: "#B4BEE2",
-    borderRadius: responsiveWidth(5),
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  actionIcon: {
-    fontSize: responsiveFontSize(2.5),
-  },
   logoutButton: {
     backgroundColor: "#FF5A1F",
     fontFamily: "Poppins_600SemiBold",
-
     borderRadius: 8,
     alignItems: "center",
   },
@@ -599,11 +607,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(2),
     fontWeight: "600",
   },
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  // ✅ Nuevos estilos para mensajes de error
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
