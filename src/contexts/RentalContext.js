@@ -1,4 +1,3 @@
-// ...existing code...
 "use client"
 
 import React, { createContext, useState, useContext } from "react"
@@ -6,14 +5,11 @@ import api from '../services/api'
 
 const RentalContext = createContext()
 
-// Servicio local
 const rentalService = {
   getRentalHistory: async () => {
-    // El backend toma el userId del token; no necesita query param
     const url = `/mobile-user/traer-historial`
     console.log('➡️ GET', (api.defaults?.baseURL || '') + url)
     const res = await api.get(url)
-    // El backend responde { success: true, data: [...] }
     const rentals = Array.isArray(res.data?.data) ? res.data.data : []
     return rentals
   },
@@ -25,21 +21,20 @@ export const RentalProvider = ({ children }) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // userId es opcional, no se usa (lo toma el backend del token)
-  const loadRentals = async (_userId) => {
+  const loadRentals = async () => {
     try {
       setLoading(true)
       setError(null)
 
       const allRentals = await rentalService.getRentalHistory()
 
+      // Filtrar solo las propiedades activas
       const active = allRentals.filter(r =>
-        r.status === 'active' || r.status === 'activo' ||
-        !r.end_date || new Date(r.end_date) > new Date()
+        r.status === 'active' || r.status === 'activo'
       )
+      // Filtrar solo el historial
       const history = allRentals.filter(r =>
-        r.status === 'completed' || r.status === 'finalizado' ||
-        (r.end_date && new Date(r.end_date) <= new Date())
+        r.status === 'completed' || r.status === 'finalizado'|| r.status === 'pending_deposit'
       )
 
       setActiveRentals(active)

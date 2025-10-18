@@ -274,11 +274,11 @@ export default function HomeScreen() {
                 </Text>
               </View>
             ) : (
-              rentalsToShow.map((rental) => (
+              rentalsToShow.map((rental) => ( // Eliminar las llaves aquí
                 <View key={rental.id} style={styles.rentalCard}>
                   <Text style={styles.rentalTitle}>
-                    {rental.property_title || rental.titulo_propiedad || 'Propiedad'}
-                  </Text>
+                  {rental.property_title || rental.titulo_propiedad || 'Propiedad'}
+                </Text>
                   <Text style={styles.rentalDate}>
                     Fecha Inicio: {new Date(rental.start_date || rental.fecha_inicio).toLocaleDateString('es-AR')}
                   </Text>
@@ -306,7 +306,10 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   </View>
                 </View>
+
+                
               ))
+
             )}
           </View>
 
