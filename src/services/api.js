@@ -9,15 +9,39 @@ const api = axios.create({
   }
 });
 
+// Variable para cachear el último token leído (con timestamp)
+let cachedToken = null;
+let cacheTimestamp = 0;
+const CACHE_DURATION = 1000; // 1 segundo
+
 // Interceptor para agregar el token
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await AsyncStorage.getItem('authToken');
+      // ✅ CAMBIAR 'authToken' por 'token'
+      const now = Date.now();
       
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`;
-        console.log('✅ Token agregado a la petición');
+      // Si el cache tiene más de 1 segundo, refrescar
+      if (!cachedToken || (now - cacheTimestamp) > CACHE_DURATION) {
+        cachedToken = await AsyncStorage.getItem('token'); // ✅ AQUÍ: 'token' no 'authToken'
+        cacheTimestamp = now;
+        console.log('🔄 Token refrescado desde AsyncStorage');
+      }
+      
+      if (cachedToken) {
+        config.headers.Authorization = `Bearer ${cachedToken}`;
+        
+        // ✅ LOG: Mostrar el exp del token para verificar
+        try {
+          const payload = JSON.parse(atob(cachedToken.split('.')[1]));
+          const exp = new Date(payload.exp * 1000);
+          const iat = new Date(payload.iat * 1000);
+          console.log('✅ Token agregado a la petición');
+          console.log('📅 Emitido:', iat.toLocaleString());
+          console.log('🕐 Expira:', exp.toLocaleString());
+        } catch (e) {
+          console.log('✅ Token agregado a la petición');
+        }
       } else {
         console.warn('⚠️ No se encontró token de autenticación');
       }
@@ -44,6 +68,15 @@ api.interceptors.response.use(
       status: error.response?.status,
       message: error.response?.data?.message || error.message
     });
+    
+    // ✅ Si el error es 401 o 403, limpiar cache y storage
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      console.warn('⚠️ Token inválido o expirado, limpiando...');
+      cachedToken = null;
+      cacheTimestamp = 0;
+      await AsyncStorage.removeItem('token'); // ✅ AQUÍ también: 'token' no 'authToken'
+      await AsyncStorage.removeItem('user');
+    }
     
     return Promise.reject(error);
   }

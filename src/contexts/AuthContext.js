@@ -1,107 +1,145 @@
 "use client"
 
-import React, { createContext, useState, useContext, useEffect } from "react"
-import AsyncStorage from "@react-native-async-storage/async-storage"
-import api from "../services/api"
+import { createContext, useState, useEffect, useContext } from "react"
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const AuthContext = createContext()
+const AuthContext = createContext({})
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null)
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
 
   useEffect(() => {
-    checkAuth()
+    checkStoredSession()
   }, [])
 
-  const checkAuth = async () => {
+  const checkStoredSession = async () => {
     try {
-      const token = await AsyncStorage.getItem("token")
-      const userStr = await AsyncStorage.getItem("user")
+      // ✅ Usar 'token' en lugar de 'authToken' para que coincida con api.js
+      const token = await AsyncStorage.getItem('token')
+      const userData = await AsyncStorage.getItem('user')
+      
+      if (token && userData) {
+        // ✅ Verificar si el token expiró
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]))
+          const exp = payload.exp * 1000
+          
+          if (Date.now() >= exp) {
+            console.log('⚠️ Token expirado, limpiando storage...')
+            await AsyncStorage.removeItem('token')
+            await AsyncStorage.removeItem('user')
+            setLoading(false)
+            return
+          }
+        } catch (e) {
+          console.error('Error al verificar token:', e)
+        }
 
-      if (token && userStr) {
-        const userData = JSON.parse(userStr)
-        setUser(userData)
-        setIsAuthenticated(true)
+        const user = JSON.parse(userData)
+        setUser(user)
+        setSession({ user, token })
       }
-    } catch (err) {
-      console.error("Error al verificar autenticación:", err)
-    } finally {
+      
+      setLoading(false)
+    } catch (error) {
+      console.error('Error checking session:', error)
       setLoading(false)
     }
   }
 
   const signIn = async (email, password) => {
     try {
-      setLoading(true)
-      setError(null)
+      console.log('Iniciando login con:', { email, password });
 
-      console.log("Intentando login con:", email)
-      const response = await api.post("/auth/login", { email, password })
+      const response = await fetch('https://rentmatch-backend.onrender.com/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
 
-      console.log("Datos recibidos:", response.data)
+      const data = await response.json();
+      console.log('Datos recibidos:', data);
 
-      // ✅ FIX: El backend devuelve access_token, no token
-      const token = response.data.access_token
-      const userData = response.data.user
-
-      if (!token) {
-        throw new Error("No se recibió token del servidor")
+      if (!response.ok) {
+        return { data: null, error: { message: data.message || 'Error en el login' } };
       }
 
-      console.log("✅ Login exitoso")
-      console.log("🔑 Token recibido:", token.substring(0, 50) + "...")
-      console.log("👤 Usuario:", userData.email)
+      // ✅ Guardar con las claves correctas: 'token' y 'user'
+      await AsyncStorage.setItem('token', data.access_token);
+      await AsyncStorage.setItem('user', JSON.stringify(data.user));
 
-      // ✅ Guardar token y usuario
-      await AsyncStorage.setItem("token", token)
-      await AsyncStorage.setItem("user", JSON.stringify(userData))
+      // ✅ Esperar un poco para asegurar que se guardó
+      await new Promise(resolve => setTimeout(resolve, 100));
 
-      // ✅ Verificar que se guardó correctamente
-      const savedToken = await AsyncStorage.getItem("token")
-      console.log("✅ Token guardado correctamente?", savedToken ? "SÍ" : "NO")
+      // ✅ Verificar que se guardó
+      const savedToken = await AsyncStorage.getItem('token');
+      console.log('✅ Token guardado?', savedToken === data.access_token ? 'SÍ ✅' : 'NO ❌');
 
-      setUser(userData)
-      setIsAuthenticated(true)
+      setUser(data.user);
+      setSession({ user: data.user, token: data.access_token });
 
-      return { success: true }
-    } catch (err) {
-      console.error("❌ Error en signIn:", err.response?.data || err.message)
-      const errorMessage = err.response?.data?.message || "Error al iniciar sesión"
-      setError(errorMessage)
-      return { success: false, error: errorMessage }
-    } finally {
-      setLoading(false)
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error en el login:', error);
+      return { data: null, error: { message: error.message || 'Error de conexión' } };
     }
-  }
+  };
 
   const signOut = async () => {
     try {
-      await AsyncStorage.removeItem("token")
-      await AsyncStorage.removeItem("user")
       setUser(null)
-      setIsAuthenticated(false)
-    } catch (err) {
-      console.error("Error al cerrar sesión:", err)
+      setSession(null)
+      
+      // ✅ Limpiar con las claves correctas
+      await AsyncStorage.removeItem('token')
+      await AsyncStorage.removeItem('user')
+
+      return { error: null }
+    } catch (error) {
+      return { error: { message: error.message || 'Error al cerrar sesión' } }
     }
   }
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated,
-        loading,
-        error,
-        signIn,
-        signOut,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  const forgotPassword = async (email) => {
+    try {
+      console.log('Iniciando proceso de recuperación de contraseña con:', { email });
+
+      const response = await fetch('https://rentmatch-backend.onrender.com/api/auth/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      console.log('Datos recibidos:', data);
+
+      if (!response.ok) {
+        return { data: null, error: { message: data.message || 'Error al solicitar recuperación de contraseña' } };
+      }
+
+      return { data, error: null };
+    } catch (error) {
+      console.error('Error en el proceso de recuperación de contraseña:', error);
+      return { data: null, error: { message: error.message || 'Error de conexión' } };
+    }
+  };
+
+  const value = {
+    user,
+    session,
+    loading,
+    signIn,
+    signOut,
+    forgotPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export const useAuth = () => {
