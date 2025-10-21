@@ -30,7 +30,7 @@
         "projectId": "bb9ab3d6-22da-45bc-84dc-c710ad135bf3"
       }
     },
-    "owner": "pablogiampe100",
+    "owner": "rentmatch",
     "plugins": [
       "expo-asset",
       "expo-font"
