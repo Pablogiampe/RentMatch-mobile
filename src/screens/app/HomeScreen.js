@@ -7,11 +7,13 @@ import { useRental } from "../../contexts/RentalContext"
 import Home from "../../../RentMatch_mobile/assets/home"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
-
+import { useNavigation } from "@react-navigation/native"
+  
 export default function HomeScreen() {
   const { user, signOut } = useAuth()
   const rentalContext = useRental()
-  
+  const navigation = useNavigation()
+
   // ✅ FIX: Leer datos directamente del nivel raíz (como viene en Postman)
   const getProp = (r) => {
     return {
@@ -175,7 +177,7 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.row}>
-              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={handleSignOut}>
+              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => navigation.navigate("Incidencias")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f" }}>
                   <IconComponent name="calendar" />
                 </View>
@@ -228,7 +230,7 @@ export default function HomeScreen() {
           </View>
 
           <View style={styles.optionsGrid}>
-            <TouchableOpacity style={styles.optionCard}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("Incidencias")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f", borderRadius: 50 }}>
                 <IconComponent name="calendar" />
               </View>
