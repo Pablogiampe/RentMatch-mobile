@@ -1,6 +1,5 @@
-"use client"
 import { useState, useRef, useEffect } from "react"
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator } from "react-native"
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator, RefreshControl } from "react-native"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useAuth } from "../../contexts/AuthContext"
 import { useRental } from "../../contexts/RentalContext"
@@ -9,7 +8,7 @@ import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-nat
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 import { useNavigation } from "@react-navigation/native"
   
-export default function HomeScreen() {
+const HomeScreen= () => {
   const { user, signOut } = useAuth()
   const rentalContext = useRental()
   const navigation = useNavigation()
@@ -71,6 +70,7 @@ export default function HomeScreen() {
   const [isExpanded, setIsExpanded] = useState(false)
   const [showArrow, setShowArrow] = useState(true)
   const [activeTab, setActiveTab] = useState("active")
+  const [refreshing, setRefreshing] = useState(false)
 
   const animatedHeight = useRef(new Animated.Value(responsiveHeight(7))).current
   const arrowRotation = useRef(new Animated.Value(0)).current
@@ -78,6 +78,15 @@ export default function HomeScreen() {
 
   const handleSignOut = async () => {
     await signOut()
+  }
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true)
+      await loadRentals?.()
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   const [fontsLoaded] = useFonts({
@@ -156,9 +165,24 @@ export default function HomeScreen() {
       >
         <View style={styles.headerCircle} />
 
+        {/* Top bar inside header */}
+        <View style={styles.headerTopRow}>
+          <TouchableOpacity
+            style={styles.headerIconBtn}
+            onPress={() => navigation.navigate("Profile")}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.headerIconEmoji}>👤</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>RentMatch</Text>
+          <TouchableOpacity style={styles.headerIconBtn} onPress={() => {}}>
+            <IconComponent name="bell" />
+          </TouchableOpacity>
+        </View>
+
         {showArrow && (
           <Animated.View style={[styles.arrowButtonContainer]}>
-            <TouchableOpacity style={styles.arrowButton} onPress={toggleExpand} activeOpacity={0.7}>
+            <TouchableOpacity style={styles.arrowButton} onPress={toggleExpand} activeOpacity={0.85}>
               <Animated.Text style={[styles.arrowIcon, { transform: [{ rotate: arrowRotate }] }]}>
                 <IconComponent name="arrow-down" />
               </Animated.Text>
@@ -169,7 +193,7 @@ export default function HomeScreen() {
         {isExpanded && (
           <View style={styles.menuContent}>
             <View style={styles.row}>
-              <TouchableOpacity style={{...styles.logoutButton, width: "33%"}} onPress={handleSignOut}>
+              <TouchableOpacity style={{...styles.logoutButton, width: "33%"}} onPress={() => navigation.navigate("Profile")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#f2edee" }}>
                   <IconComponent name="profile" />
                 </View>
@@ -178,13 +202,13 @@ export default function HomeScreen() {
             </View>
             <View style={styles.row}>
               <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => navigation.navigate("Incidencias")}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f" }}>
+                <View style={{ ...styles.iconContainer, backgroundColor: "#e91c1cff" }}>
                   <IconComponent name="calendar" />
                 </View>
                 <Text style={styles.logoutText}>Reportar Incidencias</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={handleSignOut}>
+              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => navigation.navigate("FinalState")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0" }}>
                   <IconComponent name="home" />
                 </View>
@@ -192,13 +216,13 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
             <View style={styles.row}>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+               <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate("Peritaje")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951" }}>
                   <IconComponent name="inspection" />
                 </View>
                 <Text style={styles.logoutText}>Solicitar peritaje</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
+              <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate("InitialState")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
                   <IconComponent name="form-icon" />
                 </View>
@@ -222,6 +246,14 @@ export default function HomeScreen() {
         scrollEnabled={true}
         onScroll={handleScroll}
         scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={["#FF5A1F"]}
+            tintColor="#FF5A1F"
+          />
+        }
       >
         <View style={styles.content}>
           <View style={styles.header}>
@@ -229,37 +261,48 @@ export default function HomeScreen() {
             <Text style={styles.question}>¿Qué deseas hacer hoy?</Text>
           </View>
 
+          {/* Welcome banner */}
+          <View style={styles.welcomeCard}>
+            <View style={styles.welcomeBadge}>
+              <Text style={styles.welcomeBadgeText}>Nuevo</Text>
+            </View>
+            <Text style={styles.welcomeTitle}>Todo en un solo lugar</Text>
+            <Text style={styles.welcomeSubtitle}>
+              Reportá incidencias, gestioná estados y mirá tus alquileres activos.
+            </Text>
+          </View>
+
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("Incidencias")}>
-              <View style={{ ...styles.iconContainer, backgroundColor: "#f57f7f", borderRadius: 50 }}>
+              <View style={{ ...styles.iconContainer, backgroundColor: "#FFE3E3" }}>
                 <IconComponent name="calendar" />
               </View>
               <Text style={styles.optionTitle}>Reportar</Text>
               <Text style={styles.optionSubtitle}>Incidencias</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard}>
-              <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0", borderRadius: 50 }}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("InitialState")}>
+              <View style={{ ...styles.iconContainer, backgroundColor: "#E6E8FF" }}>
                 <IconComponent name="home" />
               </View>
               <Text style={styles.optionTitle}>Registrar</Text>
               <Text style={styles.optionSubtitle}>Estado inicial</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard}>
-              <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951", borderRadius: 50 }}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("Peritaje")}>
+              <View style={{ ...styles.iconContainer, backgroundColor: "#FFF2CC" }}>
                 <IconComponent name="inspection" />
               </View>
               <Text style={styles.optionTitle}>Solicitar</Text>
-              <Text style={styles.optionSubtitle}>peritaje</Text>
+              <Text style={styles.optionSubtitle}>Peritaje</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("FinalState")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
                 <IconComponent name="form-icon" />
               </View>
               <Text style={styles.optionTitle}>Registrar</Text>
-              <Text style={styles.optionSubtitle}>estado final</Text>
+              <Text style={styles.optionSubtitle}>Estado final</Text>
             </TouchableOpacity>
           </View>
 
@@ -313,14 +356,26 @@ export default function HomeScreen() {
             ) : (
               rentalsToShow.map((rental) => {
                 const p = getProp(rental)
-                // ✅ Título con tipo de propiedad · barrio
                 const title = `${capitalize(p.type)} · ${p.neighborhood}`
-                // ✅ Ubicación completa: dirección, barrio, ciudad
                 const ubicacion = [p.address, p.neighborhood, p.city].filter(Boolean).join(", ")
+                const status = rental?.status?.toLowerCase?.() || ""
+                const statusStyle =
+                  status === "active"
+                    ? styles.statusActive
+                    : status === "pending"
+                    ? styles.statusPending
+                    : status === "completed" || status === "finished"
+                    ? styles.statusDone
+                    : styles.statusDefault
 
                 return (
                   <View key={rental.contract_id || rental.id} style={styles.rentalCard}>
-                    <Text style={styles.rentalTitle}>{title}</Text>
+                    <View style={styles.rentalHeaderRow}>
+                      <Text style={styles.rentalTitle}>{title}</Text>
+                      <View style={[styles.statusChip, statusStyle]}>
+                        <Text style={styles.statusChipText}>{capitalize(rental.status)}</Text>
+                      </View>
+                    </View>
                     <Text style={styles.rentalLocation}>Ubicación: {ubicacion}</Text>
                     <Text style={styles.rentalDate}>Fecha Inicio: {formatDate(rental.start_date)}</Text>
                     {rental.end_date && (
@@ -329,22 +384,17 @@ export default function HomeScreen() {
                     <Text style={styles.rentalPrice}>Presupuesto: {formatCurrency(p.price, p.currency)}</Text>
                     <Text style={styles.rentalDetails}>Ambientes: {p.rooms}</Text>
                     <Text style={styles.rentalDetails}>Baños: {p.bathrooms}</Text>
-                    <Text style={styles.rentalDetails}>Estado: {capitalize(rental.status)}</Text>
-                    {p.furnished && (
-                      <Text style={styles.rentalDetails}>✅ Amueblado</Text>
-                    )}
-                    {p.pets_allowed && (
-                      <Text style={styles.rentalDetails}>🐕 Mascotas permitidas</Text>
-                    )}
+                    {p.furnished && <Text style={styles.rentalDetails}>✅ Amueblado</Text>}
+                    {p.pets_allowed && <Text style={styles.rentalDetails}>🐕 Mascotas permitidas</Text>}
                     {p.amenities.length > 0 && (
-                      <Text style={styles.rentalDetails}>
-                        Amenities: {p.amenities.join(", ")}
-                      </Text>
+                      <Text style={styles.rentalDetails}>Amenities: {p.amenities.join(", ")}</Text>
                     )}
-                    {p.notes && (
-                      <Text style={styles.rentalNotes}>Nota: {p.notes}</Text>
-                    )}
-                    <View style={styles.actionButtons}>
+                    {p.notes && <Text style={styles.rentalNotes}>Nota: {p.notes}</Text>}
+
+                    <View style={styles.cardActionsRow}>
+                      <TouchableOpacity style={styles.outlineBtn} onPress={() => {}}>
+                        <Text style={styles.outlineBtnText}>Ver detalles</Text>
+                      </TouchableOpacity>
                       <TouchableOpacity style={styles.notificationButton}>
                         <IconComponent name="bell" />
                       </TouchableOpacity>
@@ -382,6 +432,32 @@ const styles = StyleSheet.create({
     height: responsiveHeight(70),
     backgroundColor: "#FF5A1F",
   },
+  headerTopRow: {
+    position: "absolute",
+    top: responsiveHeight(3),
+    left: responsiveWidth(5),
+    right: responsiveWidth(5),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  headerTitle: {
+    color: "#fff",
+    fontSize: responsiveFontSize(2.2),
+    fontWeight: "700",
+    letterSpacing: 0.3,
+  },
+  headerIconBtn: {
+    width: responsiveWidth(9),
+    height: responsiveWidth(9),
+    borderRadius: responsiveWidth(4.5),
+    backgroundColor: "rgba(255,255,255,0.2)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerIconEmoji: {
+    fontSize: responsiveFontSize(2.2),
+  },
   arrowButtonContainer: {
     position: "absolute",
     bottom: responsiveHeight(1),
@@ -391,11 +467,13 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   arrowButton: {
-    width: responsiveWidth(15),
-    height: responsiveWidth(6),
-    borderRadius: responsiveWidth(6),
+    width: responsiveWidth(16),
+    height: responsiveWidth(10),
+    borderRadius: responsiveWidth(5),
+    backgroundColor: "rgba(255,255,255,0.25)",
     justifyContent: "center",
     alignItems: "center",
+    backdropFilter: "blur(4px)",
   },
   arrowIcon: {
     fontSize: responsiveFontSize(5),
@@ -458,6 +536,38 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+  welcomeCard: {
+    backgroundColor: "#FFF4EC",
+    borderColor: "#FFD6BF",
+    borderWidth: 1,
+    paddingVertical: responsiveHeight(2),
+    paddingHorizontal: responsiveWidth(4),
+    borderRadius: 12,
+    marginBottom: responsiveHeight(3),
+  },
+  welcomeBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: "#FFE6D6",
+    paddingHorizontal: responsiveWidth(2.5),
+    paddingVertical: responsiveHeight(0.4),
+    borderRadius: 20,
+    marginBottom: responsiveHeight(0.8),
+  },
+  welcomeBadgeText: {
+    color: "#B45309",
+    fontWeight: "700",
+    fontSize: responsiveFontSize(1.2),
+  },
+  welcomeTitle: {
+    color: "#1F2937",
+    fontSize: responsiveFontSize(2.1),
+    fontWeight: "700",
+  },
+  welcomeSubtitle: {
+    color: "#6B7280",
+    fontSize: responsiveFontSize(1.5),
+    marginTop: responsiveHeight(0.5),
+  },
   optionsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -466,23 +576,23 @@ const styles = StyleSheet.create({
   },
   optionCard: {
     width: "48%",
-    backgroundColor: "#B4BEE2",
-    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderRadius: 14,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#E5E7EB",
     padding: responsiveWidth(4),
     alignItems: "center",
     marginBottom: responsiveHeight(2),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
   },
   iconContainer: {
-    width: responsiveWidth(12),
-    height: responsiveWidth(12),
-    borderRadius: responsiveWidth(6),
+    width: responsiveWidth(13),
+    height: responsiveWidth(13),
+    borderRadius: responsiveWidth(6.5),
     justifyContent: "center",
     alignItems: "center",
     marginBottom: responsiveHeight(1),
@@ -537,6 +647,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F1F4FF",
     borderRadius: 12,
     padding: responsiveWidth(4),
+    paddingBottom: responsiveHeight(6),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -544,12 +655,50 @@ const styles = StyleSheet.create({
     elevation: 3,
     position: "relative",
   },
+  rentalHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: responsiveHeight(0.5),
+  },
+  statusChip: {
+    paddingHorizontal: responsiveWidth(3),
+    paddingVertical: responsiveHeight(0.5),
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusChipText: {
+    fontSize: responsiveFontSize(1.3),
+    fontWeight: "700",
+  },
+  statusActive: {
+    backgroundColor: "#E6F9EF",
+    borderColor: "#A7F3D0",
+  },
+  statusPending: {
+    backgroundColor: "#FEF9C3",
+    borderColor: "#FDE68A",
+  },
+  statusDone: {
+    backgroundColor: "#E5E7EB",
+    borderColor: "#D1D5DB",
+  },
+  statusDefault: {
+    backgroundColor: "#F3F4F6",
+    borderColor: "#E5E7EB",
+  },
   rentalTitle: {
     fontSize: responsiveFontSize(2.2),
     fontWeight: "600",
     color: "#333",
     marginBottom: responsiveHeight(0.5),
     fontFamily: "Poppins_600SemiBold",
+  },
+  rentalLocation: {
+    fontSize: responsiveFontSize(1.6),
+    color: "#666",
+    marginBottom: responsiveHeight(0.5),
+    fontFamily: "Poppins_400Regular",
   },
   rentalDate: {
     fontSize: responsiveFontSize(1.6),
@@ -564,12 +713,6 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(0.5),
     fontFamily: "Poppins_600SemiBold",
   },
-  rentalLocation: {
-    fontSize: responsiveFontSize(1.6),
-    color: "#666",
-    marginBottom: responsiveHeight(0.5),
-    fontFamily: "Poppins_400Regular",
-  },
   rentalDetails: {
     fontSize: responsiveFontSize(1.6),
     color: "#666",
@@ -582,6 +725,28 @@ const styles = StyleSheet.create({
     fontStyle: "italic",
     marginTop: responsiveHeight(0.5),
     fontFamily: "Poppins_400Regular",
+  },
+  cardActionsRow: {
+    position: "absolute",
+    bottom: responsiveHeight(1.5),
+    left: responsiveWidth(4),
+    right: responsiveWidth(4),
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  outlineBtn: {
+    paddingVertical: responsiveHeight(1),
+    paddingHorizontal: responsiveWidth(4),
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#D1D5DB",
+    backgroundColor: "#fff",
+  },
+  outlineBtnText: {
+    color: "#111827",
+    fontWeight: "600",
+    fontSize: responsiveFontSize(1.6),
   },
   actionButtons: {
     position: "absolute",
@@ -673,3 +838,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 })
+export default HomeScreen

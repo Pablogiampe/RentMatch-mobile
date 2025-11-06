@@ -1,313 +1,325 @@
 "use client"
-import { useState, useEffect } from "react"
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  TextInput,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from "react-native"
-import { useNavigation, useRoute } from "@react-navigation/native"
+
+import { useEffect, useState } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
-import IconComponent from "../../../RentMatch_mobile/assets/icons"
-import IncidenciasSvg from "../../../RentMatch_mobile/assets/IncidenciasSvg"
-export default function IncidenciasScreen() {
-  const navigation = useNavigation()
-  const route = useRoute()
 
-  // si querés pasar título desde otra pantalla: route.params?.title
-  const propertyTitle = route.params?.title || "Departamento en Belgrano"
+const ORANGE = "#FF5A1F"
 
-  const [reason, setReason] = useState("")
+const IncidenciasScreen = ({ route, navigation }) => {
+  const propertyTitle = route?.params?.title || "Departamento en Belgrano"
+
+  // Form state
+  const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [date, setDate] = useState("") // string simple para evitar dependencia extra
-  const [contactName, setContactName] = useState("")
-  const [contactEmail, setContactEmail] = useState("")
-  const [contactPhone, setContactPhone] = useState("")
-  const [agree, setAgree] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
+  const [room, setRoom] = useState("")
+  const [urgency, setUrgency] = useState(null) // "low" | "medium" | "high" | null
+  const [imageAdded, setImageAdded] = useState(false)
 
-  useEffect(() => {
-    // ajustar header si querés back button nativo
-    navigation.setOptions?.({
-      headerShown: false,
-    })
-  }, [])
+  const isDirty =
+    !!title.trim() ||
+    !!description.trim() ||
+    !!room.trim() ||
+    urgency !== null ||
+    imageAdded
 
-  const validateAndSubmit = () => {
-    if (!reason.trim()) return Alert.alert("Falta razón", "Completá el campo Razón.")
-    if (!description.trim()) return Alert.alert("Falta descripción", "Completá la descripción.")
-    if (!date.trim()) return Alert.alert("Falta fecha", "Seleccioná una fecha.")
-    if (!contactName.trim()) return Alert.alert("Falta nombre", "Completá tu nombre.")
-    if (!contactEmail.trim()) return Alert.alert("Falta email", "Completá tu email.")
-    if (!agree) return Alert.alert("Aceptar términos", "Aceptá los términos y condiciones para enviar.")
-
-    setSubmitting(true)
-
-    // Simulación de envío
-    setTimeout(() => {
-      setSubmitting(false)
-      Alert.alert("Enviado", "Tu incidencia fue enviada correctamente.")
-      navigation.goBack?.()
-    }, 900)
+  const handleUploadImage = () => {
+    setImageAdded(true)
+    Alert.alert("Subir foto", "TODO: Integrar selector de imágenes (expo-image-picker).")
   }
 
+  const handleSaveDraft = () => {
+    Alert.alert("Borrador guardado", "Se guardó como borrador.")
+  }
+
+  const confirmLeaveIfDirty = (onProceed) => {
+    if (!isDirty) {
+      onProceed()
+      return
+    }
+    Alert.alert(
+      "Salir",
+      "Tenés cambios sin guardar. ¿Querés guardarlos como borrador o descartar lo escrito?",
+      [
+        { text: "Cancelar", style: "cancel" },
+        { text: "Descartar", style: "destructive", onPress: onProceed },
+        { text: "Guardar borrador", onPress: () => { handleSaveDraft(); onProceed() } },
+      ]
+    )
+  }
+
+  const handleBack = () => confirmLeaveIfDirty(() => navigation.goBack())
+  useEffect(() => {
+    const unsub = navigation.addListener("beforeRemove", (e) => {
+      if (!isDirty) return
+      e.preventDefault()
+      confirmLeaveIfDirty(() => navigation.dispatch(e.data.action))
+    })
+    return unsub
+  }, [navigation, isDirty])
+
+  const handleSubmit = () => {
+    Alert.alert("Enviar Reporte", "TODO: enviar reporte a la API.")
+  }
+
+  const previousIncidents = [
+    { id: "#12345", title: "Incidente #12345", subtitle: "Ventana rota en la cocina" },
+    { id: "#67890", title: "Incidente #67890", subtitle: "Vaso roto" },
+  ]
+
   return (
-    <KeyboardAvoidingView  >
-      <IncidenciasSvg />
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.topBar}>
-          <TouchableOpacity style={styles.back} onPress={() => navigation.goBack?.()}>
-            <IconComponent name="back-arrow" />
-          </TouchableOpacity>
-          <Text style={styles.topTitle}>Solicitar Peritaje</Text>
-          <View style={styles.topSpacer} />
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* Back */}
+      <View style={styles.headerRow}>
+        <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
+          <Text style={styles.backIcon}>←</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Headers */}
+      <Text style={styles.smallHeader}>Nuevo incidente</Text>
+      <Text style={styles.screenTitle}>{propertyTitle}</Text>
+
+      {/* Titulo */}
+      <Text style={styles.label}>Titulo</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Escribí un título"
+        placeholderTextColor="#9AA2B1"
+        value={title}
+        onChangeText={setTitle}
+      />
+
+      {/* Descripcion */}
+      <TextInput
+        style={[styles.input, styles.textArea]}
+        placeholder="Agregá una descripción"
+        placeholderTextColor="#9AA2B1"
+        value={description}
+        onChangeText={setDescription}
+        multiline
+      />
+
+      {/* Habitación */}
+      <Text style={styles.label}>Habitacion</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Ej: Cocina, Living, Dormitorio..."
+        placeholderTextColor="#9AA2B1"
+        value={room}
+        onChangeText={setRoom}
+      />
+
+      {/* Imagenes */}
+      <Text style={styles.sectionHeader}>Imagenes</Text>
+      <TouchableOpacity style={styles.uploadBox} onPress={handleUploadImage}>
+        <Text style={styles.uploadTitle}>Subir foto</Text>
+        <Text style={styles.helperText}>
+          Agregue fotos para que podamos entender{"\n"}mejor la situación
+        </Text>
+        <View style={styles.uploadIconBox}>
+          <Text style={styles.uploadIcon}>⬆️</Text>
         </View>
+      </TouchableOpacity>
 
-        <View style={styles.card}>
-          <Text style={styles.propertyTitle}>{propertyTitle}</Text>
+      {/* Urgencia */}
+      <Text style={styles.sectionHeader}>Urgencia</Text>
+      <View style={styles.segment}>
+        {[
+          { key: "low", label: "Baja" },
+          { key: "medium", label: "Media" },
+          { key: "high", label: "Alta" },
+        ].map((opt) => {
+          const active = urgency === opt.key
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              style={[styles.segmentBtn, active && styles.segmentActive]}
+              onPress={() => setUrgency(opt.key)}
+            >
+              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          )
+        })}
+      </View>
 
-          <Text style={styles.label}>Razón</Text>
-          <TextInput
-            value={reason}
-            onChangeText={setReason}
-            style={styles.input}
-            placeholderTextColor="#9BA3C7"
-          />
-
-          <Text style={styles.label}>Descripción</Text>
-          <TextInput
-            value={description}
-            onChangeText={setDescription}
-            style={[styles.input, styles.textarea]}
-            placeholderTextColor="#9BA3C7"
-            multiline
-          />
-          <View style={styles.inputPasswordContainer}>
-            <TextInput
-              style={styles.inputPassword}
-
-              multiline={false}
-              scrollEnabled={true}
-              // ✅ Nuevas props para el botón del teclado
-              returnKeyType="done"
-            />
+      {/* Incidentes Previos */}
+      <Text style={styles.prevHeader}>Incidentes Previos</Text>
+      {previousIncidents.map((item) => (
+        <View key={item.id} style={styles.prevItem}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.prevTitle}>{item.title}</Text>
+            <Text style={styles.prevSubtitle}>{item.subtitle}</Text>
           </View>
-           <View style={styles.inputPasswordContainer}>
-            <TextInput
-              style={styles.inputPassword}
-              placeholder="Contraseña"
-              multiline={false}
-              scrollEnabled={true} 
-              // ✅ Nuevas props para el botón del teclado
-              returnKeyType="done"
-            />
-          </View>
-          <Text style={styles.label}>Fecha</Text>
-          <TouchableOpacity style={styles.input} onPress={() => {
-            // uso simple: abrir prompt para ingresar fecha rápido
-            // podés reemplazar por DatePicker nativo si lo preferís
-            const today = new Date().toLocaleDateString()
-            setDate(prev => prev || today)
-            Alert.alert("Seleccionar fecha", "Fecha fijada a hoy (puedes reemplazar por DatePicker).")
-          }}>
-            <Text style={date ? styles.inputText : styles.inputPlaceholder}>
-              {date || "Seleccionar fecha"}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.sectionTitle}>Información de contacto</Text>
-
-          <TextInput
-            value={contactName}
-            onChangeText={setContactName}
-            style={styles.input}
-            placeholderTextColor="#9BA3C7"
-          />
-          <TextInput
-            value={contactEmail}
-            onChangeText={setContactEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-            style={styles.input}
-            placeholderTextColor="#9BA3C7"
-          />
-          <TextInput
-            value={contactPhone}
-            onChangeText={setContactPhone}
-            keyboardType="phone-pad"
-            style={styles.input}
-            placeholderTextColor="#9BA3C7"
-          />
-
-          <TouchableOpacity style={styles.termsRow} onPress={() => setAgree(!agree)} activeOpacity={0.8}>
-            <View style={[styles.checkbox, agree && styles.checkboxChecked]}>
-              {agree && <IconComponent name="check" />}
-            </View>
-            <Text style={styles.termsText}>Estoy de acuerdo con los términos y condiciones</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-            onPress={validateAndSubmit}
-            disabled={submitting}
-          >
-            <Text style={styles.submitText}>{submitting ? "Enviando..." : "Enviar"}</Text>
-          </TouchableOpacity>
+          <View style={styles.dot} />
         </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      ))}
+
+      {/* Submit */}
+      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
+        <Text style={styles.submitText}>Enviar Reporte</Text>
+      </TouchableOpacity>
+    </ScrollView>
   )
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "none" },
   container: {
-    padding: responsiveWidth(4),
-    alignItems: "center",
-    backgroundColor: "none",
-    height: "100%",
-
+    padding: responsiveWidth(6),
+    backgroundColor: "#fff",
   },
-  topBar: {
-    width: "100%",
+  headerRow: {
     flexDirection: "row",
     alignItems: "center",
     marginBottom: responsiveHeight(1),
-    marginTop: responsiveHeight(4),
   },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: "center",
-    color: "red",
-    alignItems: "center",
+  backBtn: {
+    paddingVertical: responsiveHeight(0.5),
+    paddingHorizontal: responsiveWidth(1),
   },
-  topTitle: {
-    flex: 1,
+  backIcon: {
+    fontSize: responsiveFontSize(3),
+    color: "#1a1a1a",
+  },
+  smallHeader: {
     textAlign: "center",
-    fontSize: responsiveFontSize(2.2),
+    color: "#60666F",
     fontWeight: "600",
-    color: "#0B0B0C",
+    fontSize: responsiveFontSize(1.7),
+    marginTop: responsiveHeight(0.5),
   },
-  topSpacer: { width: 36 },
-  card: {
-    width: "100%",
-    height: "100%",
-    backgroundColor: "none",
-    borderRadius: 10,
-    padding: responsiveWidth(2),
-
-  },
-    inputPasswordContainer: {
-    height: 48, // Altura fija del contenedor
-    display: "flex",
-    flexDirection: "row",
-    borderWidth: 1,
-    borderColor: "rgba(105, 138, 238, 0.5)",
-    borderRadius: 8,
-    backgroundColor: "#F1F4FF",
-    alignItems: 'center',
-    shadowColor: "#8e8a8aff",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-
-    shadowRadius: 4,
-    elevation: 3,
-  },
-    inputPassword: {
-    height: 48,
-    width: "75%",
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    color: "#5c5858ff",
-    fontWeight: "600",
-    fontSize: responsiveFontSize(1.8),
-    textAlignVertical: 'center',
-    includeFontPadding: false,
-    overflow: 'hidden',
-  },
-  propertyTitle: {
-    textAlign: "center",
+  screenTitle: {
     fontSize: responsiveFontSize(2.4),
     fontWeight: "700",
+    color: "#1a1a1a",
+    textAlign: "center",
     marginBottom: responsiveHeight(2),
-    color: "#111213",
   },
   label: {
-    fontSize: responsiveFontSize(1.6),
-    color: "#222",
-    marginBottom: responsiveHeight(0.5),
+    fontSize: responsiveFontSize(1.8),
+    fontWeight: "600",
+    color: "#1a1a1a",
+    marginBottom: responsiveHeight(1),
   },
   input: {
-    backgroundColor: "#F5F8FF",
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D8E0FF",
+    backgroundColor: "#F1F4FF",
+    borderRadius: 10,
     paddingHorizontal: responsiveWidth(3),
     paddingVertical: responsiveHeight(1.6),
-    marginBottom: responsiveHeight(1.4),
+    marginBottom: responsiveHeight(2),
+    color: "#1a1a1a",
+    fontSize: responsiveFontSize(1.8),
   },
-  inputText: {
-    color: "#111",
-  },
-  inputPlaceholder: {
-    color: "#9BA3C7",
-  },
-  textarea: {
-    minHeight: responsiveHeight(12),
+  textArea: {
+    height: responsiveHeight(16),
     textAlignVertical: "top",
   },
-  sectionTitle: {
-    marginTop: responsiveHeight(1),
-    marginBottom: responsiveHeight(0.5),
-    fontWeight: "600",
-    color: "#444",
+  sectionHeader: {
+    fontSize: responsiveFontSize(1.9),
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: responsiveHeight(1),
   },
-  termsRow: {
+  uploadBox: {
+    borderWidth: 1,
+    borderColor: "#E4E6EB",
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: responsiveHeight(4),
+    alignItems: "center",
+    marginBottom: responsiveHeight(3),
+  },
+  uploadTitle: {
+    fontSize: responsiveFontSize(1.9),
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: responsiveHeight(0.8),
+  },
+  helperText: {
+    fontSize: responsiveFontSize(1.5),
+    color: "#666",
+    textAlign: "center",
+    marginBottom: responsiveHeight(1.6),
+    lineHeight: responsiveHeight(2.2),
+  },
+  uploadIconBox: {
+    backgroundColor: "#FFF5F0",
+    paddingVertical: responsiveHeight(0.8),
+    paddingHorizontal: responsiveWidth(3),
+    borderRadius: 8,
+  },
+  uploadIcon: {
+    fontSize: responsiveFontSize(2.4),
+    color: ORANGE,
+  },
+  segment: {
+    flexDirection: "row",
+    gap: responsiveWidth(3),
+    marginBottom: responsiveHeight(3),
+  },
+  segmentBtn: {
+    flex: 0,
+    paddingVertical: responsiveHeight(1.2),
+    paddingHorizontal: responsiveWidth(4),
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "#E4E6EB",
+    backgroundColor: "#fff",
+  },
+  segmentActive: {
+    backgroundColor: ORANGE,
+    borderColor: ORANGE,
+  },
+  segmentText: {
+    fontSize: responsiveFontSize(1.7),
+    color: "#1a1a1a",
+    fontWeight: "600",
+  },
+  segmentTextActive: {
+    color: "#fff",
+  },
+  prevHeader: {
+    fontSize: responsiveFontSize(1.9),
+    fontWeight: "700",
+    color: "#1a1a1a",
+    marginBottom: responsiveHeight(1),
+  },
+  prevItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: responsiveHeight(1.2),
+    paddingVertical: responsiveHeight(1.4),
   },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#E86B3A",
-    marginRight: responsiveWidth(2),
-    backgroundColor: "#fff",
-
-    justifyContent: "center",
-    alignItems: "center",
+  prevTitle: {
+    fontSize: responsiveFontSize(1.7),
+    fontWeight: "600",
+    color: "#1a1a1a",
   },
-  checkboxChecked: {
-    backgroundColor: "#FF5A1F",
-    borderColor: "#FF5A1F",
-  },
-  termsText: {
-    flex: 1,
+  prevSubtitle: {
     fontSize: responsiveFontSize(1.5),
-    color: "#333",
+    color: "#6B7280",
   },
-  submitButton: {
-    marginTop: responsiveHeight(1.5),
-    backgroundColor: "#FF5A1F",
-    paddingVertical: responsiveHeight(1.8),
-    borderRadius: 8,
+  dot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: ORANGE,
+    marginLeft: responsiveWidth(2),
+  },
+  submitBtn: {
+    marginTop: responsiveHeight(2),
+    backgroundColor: ORANGE,
+    borderRadius: 10,
     alignItems: "center",
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
+    paddingVertical: responsiveHeight(1.8),
+    marginBottom: responsiveHeight(4),
   },
   submitText: {
     color: "#fff",
-    fontWeight: "700",
     fontSize: responsiveFontSize(1.9),
+    fontWeight: "700",
   },
 })
+
+export default IncidenciasScreen

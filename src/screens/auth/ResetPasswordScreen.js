@@ -15,7 +15,7 @@ import {
 } from "react-native"
 import { useAuth } from "../../contexts/AuthContext"
 
-export default function ResetPasswordScreen({ navigation }) {
+const ResetPasswordScreen = ({ navigation }) => {
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -160,3 +160,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 })
+
+
+export default ResetPasswordScreen

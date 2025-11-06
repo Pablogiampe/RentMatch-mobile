@@ -12,7 +12,9 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Animated, // ← Agrega esta línea
+  Animated,
+  Dimensions,
+  Easing,
 } from "react-native"
 import Checkbox from 'expo-checkbox'; // ← Agrega esta línea
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
@@ -20,7 +22,7 @@ import InicioSesion from "../../../RentMatch_mobile/assets/InicioSesion"
 import { useAuth } from "../../contexts/AuthContext"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
-export default function LoginScreen({ navigation }) {
+const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("daviddf2497@gmail.com")
   const [password, setPassword] = useState("123123123")
   const [showPassword, setShowPassword] = useState(false)
@@ -33,6 +35,8 @@ export default function LoginScreen({ navigation }) {
   // Referencias para los TextInput
   const emailRef = useRef(null);
   const passwordRef = useRef(null);
+  const { height: SCREEN_HEIGHT } = Dimensions.get("window")
+  const fillAnim = useRef(new Animated.Value(0)).current
   let [fontsLoaded] = useFonts({
     Poppins_400Regular,
     Poppins_600SemiBold,
@@ -43,6 +47,10 @@ export default function LoginScreen({ navigation }) {
     console.log("Show Password:", showPassword)
   }, [showPassword])
 
+  useEffect(() => {
+    // por si se vuelve a esta pantalla, resetear
+    fillAnim.setValue(0)
+  }, [])
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -68,14 +76,24 @@ export default function LoginScreen({ navigation }) {
 
       console.log('Login exitoso:', data)
       Alert.alert("Éxito", "Login exitoso!")
-      // Aquí podrías navegar a la pantalla principal
+      // Animación: pintar naranja desde abajo hacia arriba
+      Animated.timing(fillAnim, {
+        toValue: SCREEN_HEIGHT,
+        duration: 700,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: false, // height no soporta driver nativo
+      }).start(({ finished }) => {
+        if (finished) {
+          navigation.replace("Home") // cambia por tu ruta real si difiere
+        }
+      })
+      // no hacemos setLoading(false); la pantalla se reemplaza
 
     } catch (error) {
       console.error('Error inesperado:', error)
       Alert.alert("Error", "Ocurrió un error inesperado. Inténtalo de nuevo.")
+      setLoading(false)
     }
-
-    setLoading(false)
   }
 
   // Función para animar cuando se presiona
@@ -123,7 +141,6 @@ export default function LoginScreen({ navigation }) {
   }
 
   return (
-
     <KeyboardAvoidingView style={styles.container}>
       <InicioSesion style={{ position: "absolute", top: 0, left: 0, }} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -214,6 +231,12 @@ export default function LoginScreen({ navigation }) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Overlay naranja que crece hasta altura total */}
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.footer, { height: fillAnim }]}
+      />
     </KeyboardAvoidingView>
   )
 }
@@ -350,9 +373,13 @@ const styles = StyleSheet.create({
     color: "#3f3d3dff",
   },
   footer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#FF5A1F",
+    zIndex: 9999,
+    elevation: 9999,
   },
   footerText: {
     color: "#666",
@@ -387,3 +414,6 @@ const styles = StyleSheet.create({
     marginLeft: responsiveWidth(1),
   },
 })
+
+export default LoginScreen
+

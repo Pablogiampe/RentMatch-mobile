@@ -16,7 +16,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import Recuperacion from "../../../RentMatch_mobile/assets/Recuperacion"
-export default function ForgotPasswordScreen({ navigation }) {
+const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const { forgotPassword } = useAuth()
@@ -269,3 +269,5 @@ const styles = StyleSheet.create({
     marginLeft: responsiveWidth(1),
   },
 })
+
+export default ForgotPasswordScreen
