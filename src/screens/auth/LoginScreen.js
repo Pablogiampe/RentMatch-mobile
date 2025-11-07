@@ -23,11 +23,13 @@ import { useAuth } from "../../contexts/AuthContext"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
 const LoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState("daviddf2497@gmail.com")
-  const [password, setPassword] = useState("123123123")
+  // const [email, setEmail] = useState("daviddf2497@gmail.com")
+  // const [password, setPassword] = useState("123123123")
+    const [email, setEmail] = useState("pablogiampe+20@gmail.com")
+  const [password, setPassword] = useState("P*blo12345")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const { signIn } = useAuth()
+  const { signIn, setSession, setUser } = useAuth()
 
   // Valores animados para el checkbox
   const checkboxScale = useState(new Animated.Value(1))[0]
@@ -52,6 +54,11 @@ const LoginScreen = ({ navigation }) => {
     fillAnim.setValue(0)
   }, [])
 
+  useEffect(() => {
+    // Resetear animación cuando el componente se monta
+    fillAnim.setValue(0)
+  }, [])
+
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Por favor completa todos los campos")
@@ -63,31 +70,32 @@ const LoginScreen = ({ navigation }) => {
     try {
       console.log('Intentando login con:', email)
 
-      // Usar la lógica de signIn desde AuthContext
       const { data, error } = await signIn(email, password)
 
       if (error) {
         console.error('Error en el login:', error.message)
         Alert.alert('Error', error.message)
-            setLoading(false)
-
+        setLoading(false)
         return
       }
 
       console.log('Login exitoso:', data)
-      Alert.alert("Éxito", "Login exitoso!")
-      // Animación: pintar naranja desde abajo hacia arriba
+      
+      // ✅ Iniciar animación primero
       Animated.timing(fillAnim, {
         toValue: SCREEN_HEIGHT,
         duration: 700,
         easing: Easing.out(Easing.cubic),
-        useNativeDriver: false, // height no soporta driver nativo
-      }).start(({ finished }) => {
-        if (finished) {
-          navigation.replace("Home") // cambia por tu ruta real si difiere
-        }
+        useNativeDriver: false,
+      }).start(() => {
+        // ✅ Actualizar el estado de auth
+        setSession(data.access_token)
+        setUser(data.user)
+        setLoading(false)
+        
+        // ✅ Navegar normalmente dentro del mismo stack
+        navigation.navigate('Home')
       })
-      // no hacemos setLoading(false); la pantalla se reemplaza
 
     } catch (error) {
       console.error('Error inesperado:', error)
@@ -416,4 +424,3 @@ const styles = StyleSheet.create({
 })
 
 export default LoginScreen
-

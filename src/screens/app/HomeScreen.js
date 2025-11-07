@@ -252,6 +252,7 @@ const HomeScreen= () => {
             onRefresh={onRefresh}
             colors={["#FF5A1F"]}
             tintColor="#FF5A1F"
+            
           />
         }
       >

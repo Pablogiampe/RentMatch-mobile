@@ -5,6 +5,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./RentMatch_mobile/assets/icon.png",
+    "backgroundColor": "#FF5A1F",
+
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {

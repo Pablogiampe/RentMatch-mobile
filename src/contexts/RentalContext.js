@@ -3,6 +3,7 @@
 import React, { createContext, useState, useContext, useCallback } from "react"
 import api from '../services/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
+import { all } from "axios"
 
 const RentalContext = createContext()
 
@@ -94,7 +95,7 @@ export const RentalProvider = ({ children }) => {
         const status = String(r.status || '').toLowerCase()
         return ['completed', 'finalizado', 'pending_deposit', 'cancelled', 'canceled'].includes(status)
       })
-
+console.log ('deposito pagado' ,history  )
       console.log('Activos:', active.length)
       console.log('Historial:', history.length)
 

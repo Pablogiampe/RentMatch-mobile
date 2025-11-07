@@ -10,7 +10,13 @@ const Stack = createNativeStackNavigator()
 export default function AppStack() {
   return (
     <RentalProvider>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator  
+      screenOptions={{
+        headerShown: false,
+        contentStyle: {
+          backgroundColor: '#FF5A1F',
+       },
+      }}>
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="Peritaje" component={PeritajeScreen} />
         <Stack.Screen name="FinalState" component={FinalStateScreen}  />

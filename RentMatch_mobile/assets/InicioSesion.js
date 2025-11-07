@@ -39,7 +39,7 @@ const InicioSesion = ({ width, height, style }) => {
 
         <Circle cx="271" cy="77" r="350" stroke="#F8F9FF" strokeWidth="3" fill="none" />
 
-        <Ellipse cx="414" cy="-150" rx="450" ry="400" fill="#FF5A1F" />
+        <Ellipse cx="300" cy="-200" rx="450" ry="400" fill="#FF5A1F" />
 
         <Ellipse cx="206.5" cy="1150" rx="450" ry="350" fill="#FF5A1F" />
       </G>

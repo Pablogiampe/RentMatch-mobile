@@ -13,38 +13,18 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     checkStoredSession()
   }, [])
-
   const checkStoredSession = async () => {
     try {
-      // ✅ Usar 'token' en lugar de 'authToken' para que coincida con api.js
       const token = await AsyncStorage.getItem('token')
       const userData = await AsyncStorage.getItem('user')
-      
+  
       if (token && userData) {
-        // ✅ Verificar si el token expiró
-        try {
-          const payload = JSON.parse(atob(token.split('.')[1]))
-          const exp = payload.exp * 1000
-          
-          if (Date.now() >= exp) {
-            console.log('⚠️ Token expirado, limpiando storage...')
-            await AsyncStorage.removeItem('token')
-            await AsyncStorage.removeItem('user')
-            setLoading(false)
-            return
-          }
-        } catch (e) {
-          console.error('Error al verificar token:', e)
-        }
-
-        const user = JSON.parse(userData)
-        setUser(user)
-        setSession({ user, token })
+        setSession(token)
+        setUser(JSON.parse(userData))
       }
-      
-      setLoading(false)
     } catch (error) {
       console.error('Error checking session:', error)
+    } finally {
       setLoading(false)
     }
   }
@@ -53,7 +33,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('Iniciando login con:', { email, password });
 
-      const response = await fetch('https://rentmatch-backend.onrender.com/api/auth/login', {
+      const response = await fetch('https://rentmatch-backend.onrender.com/api/mobile-auth/login-mobile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -65,27 +45,20 @@ export const AuthProvider = ({ children }) => {
       console.log('Datos recibidos:', data);
 
       if (!response.ok) {
-        return { data: null, error: { message: data.message || 'Error en el login' } };
+        const errorMessage = typeof data === 'string' ? data : JSON.stringify(data);
+        return { data: null, error: { message: errorMessage || 'Error en el login' } };
       }
 
-      // ✅ Guardar con las claves correctas: 'token' y 'user'
+      // ✅ Guardar en AsyncStorage pero NO actualizar el estado aún
       await AsyncStorage.setItem('token', data.access_token);
       await AsyncStorage.setItem('user', JSON.stringify(data.user));
 
-      // ✅ Esperar un poco para asegurar que se guardó
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      // ✅ Verificar que se guardó
-      const savedToken = await AsyncStorage.getItem('token');
-      console.log('✅ Token guardado?', savedToken === data.access_token ? 'SÍ ✅' : 'NO ❌');
-
-      setUser(data.user);
-      setSession({ user: data.user, token: data.access_token });
-
+      // ✅ Retornar los datos para que LoginScreen maneje la animación
       return { data, error: null };
     } catch (error) {
-      console.error('Error en el login:', error);
-      return { data: null, error: { message: error.message || 'Error de conexión' } };
+      console.error('Error en signIn:', error);
+      const errorMessage = error.message || JSON.stringify(error);
+      return { data: null, error: { message: errorMessage } };
     }
   };
 
@@ -135,8 +108,11 @@ export const AuthProvider = ({ children }) => {
     session,
     loading,
     signIn,
+    checkStoredSession,
     signOut,
     forgotPassword,
+    setSession, // ✅ Agregar
+    setUser,    // ✅ Agregar
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
