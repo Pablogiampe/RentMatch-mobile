@@ -1,12 +1,15 @@
 import axios from 'axios';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_URL } from '@env';
+
+console.log('🔗 API_URL cargada:', API_URL); // Para debug
 
 const api = axios.create({
-  baseURL: 'https://rentmatch-backend.onrender.com/api',
-  timeout: 15000,
+  baseURL: API_URL || 'http://192.168.1.36:5000/api',
+  timeout: 10000,
   headers: {
+    'Accept': 'application/json',
     'Content-Type': 'application/json',
-  }
+  },
 });
 
 // Variable para cachear el último token leído (con timestamp)

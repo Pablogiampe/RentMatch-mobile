@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }) => {
     try {
       console.log('Iniciando login con:', { email, password });
 
-      const response = await fetch('https://rentmatch-backend.onrender.com/api/mobile-auth/login-mobile', {
+      const response = await fetch('http://192.168.1.36:5000/api/mobile-auth/login-mobile', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
