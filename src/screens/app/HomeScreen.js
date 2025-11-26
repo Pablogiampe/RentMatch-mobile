@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react"
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator, RefreshControl } from "react-native"
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator, RefreshControl, FlatList, Alert } from "react-native"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useAuth } from "../../contexts/AuthContext"
 import { useRental } from "../../contexts/RentalContext"
@@ -7,11 +7,24 @@ import Home from "../../../RentMatch_mobile/assets/home"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 import { useNavigation } from "@react-navigation/native"
+
+// Constantes para el carrusel
+const CARD_WIDTH = responsiveWidth(88)
+const SPACING = responsiveWidth(4)
+const SNAP_INTERVAL = CARD_WIDTH + SPACING
+const SIDE_SPACER = (responsiveWidth(100) - CARD_WIDTH) / 2
   
 const HomeScreen= () => {
   const { user, signOut } = useAuth()
   const rentalContext = useRental()
   const navigation = useNavigation()
+  
+  // Estado para el alquiler seleccionado (Contexto actual)
+  const [selectedRental, setSelectedRental] = useState(null)
+  // Nuevo estado para controlar el índice activo visualmente
+  const [activeIndex, setActiveIndex] = useState(0)
+  const flatListRef = useRef(null)
+  const scrollX = useRef(new Animated.Value(0)).current // Referencia para animación fluida
 
   // ✅ FIX: Leer datos directamente del nivel raíz (como viene en Postman)
   const getProp = (r) => {
@@ -38,7 +51,7 @@ const HomeScreen= () => {
     error = null,
     loadRentals,
   } = rentalContext || {}
-  
+
   const formatDate = (d) => {
     if (!d) return "—"
     try {
@@ -69,10 +82,11 @@ const HomeScreen= () => {
   
   const [isExpanded, setIsExpanded] = useState(false)
   const [showArrow, setShowArrow] = useState(true)
-  const [activeTab, setActiveTab] = useState("active")
+  // const [activeTab, setActiveTab] = useState("active") // ELIMINADO: Ya no necesitamos tabs
   const [refreshing, setRefreshing] = useState(false)
 
-  const animatedHeight = useRef(new Animated.Value(responsiveHeight(7))).current
+  // Aumentamos la altura inicial a 12% para evitar el notch/cámara
+  const animatedHeight = useRef(new Animated.Value(responsiveHeight(9))).current
   const arrowRotation = useRef(new Animated.Value(0)).current
   const scrollY = useRef(0)
 
@@ -97,10 +111,31 @@ const HomeScreen= () => {
 
   useEffect(() => {
     if (user?.id) {
-      console.log("Cargando alquileres para el usuario:", user.id)
+      console.log("🏠 HomeScreen: Cargando alquileres para usuario:", user.id)
       loadRentals()
     }
-  }, [user?.id])
+  }, [user?.id, loadRentals])
+
+  // Efecto para seleccionar el primer alquiler por defecto cuando cargan
+  useEffect(() => {
+    if (activeRentals && activeRentals.length > 0 && !selectedRental) {
+      setSelectedRental(activeRentals[0])
+      setActiveIndex(0)
+    }
+  }, [activeRentals])
+
+  // Debug: verificar estado de alquileres
+  useEffect(() => {
+    console.log('\n📋 ===== ESTADO ALQUILERES =====')
+    console.log('Activos:', activeRentals.length)
+    console.log('Historial:', rentalHistory.length)
+    console.log('Loading:', loading)
+    console.log('Error:', error)
+    if (activeRentals.length > 0) {
+      console.log('Primer activo:', JSON.stringify(activeRentals[0], null, 2))
+    }
+    console.log('📋 ================================\n')
+  }, [activeRentals, rentalHistory, loading, error])
 
   if (!fontsLoaded) {
     return null
@@ -130,7 +165,8 @@ const HomeScreen= () => {
 
     Animated.parallel([
       Animated.spring(animatedHeight, {
-        toValue: newExpandedState ? responsiveHeight(60) : responsiveHeight(7),
+        // Expandido a 60% para ver menú, Colapsado a 12% para seguridad notch
+        toValue: newExpandedState ? responsiveHeight(50) : responsiveHeight(9),
         useNativeDriver: false,
         tension: 50,
         friction: 7,
@@ -148,7 +184,50 @@ const HomeScreen= () => {
     outputRange: ["0deg", "180deg"],
   })
   
-  const rentalsToShow = activeTab === "active" ? activeRentals : rentalHistory
+  // const rentalsToShow = activeTab === "active" ? activeRentals : rentalHistory // ELIMINADO
+
+  // Función auxiliar para navegar con el contexto del alquiler seleccionado
+  const handleAction = (screenName) => {
+    if (!selectedRental) {
+      Alert.alert("Selección requerida", "Por favor, selecciona un alquiler activo arriba para continuar.")
+      return
+    }
+    
+    // 👇 AQUÍ es donde se define el parámetro del contrato
+    const contractId = selectedRental.contract_id || selectedRental.id
+    const title = selectedRental.property_type 
+      ? `${capitalize(selectedRental.property_type)}` 
+      : "Propiedad"
+
+    console.log(`🚀 Navegando a ${screenName} con contrato: ${contractId}`)
+
+    navigation.navigate(screenName, { 
+      contract_id: contractId,
+      title: title,
+      rentalData: selectedRental // Pasamos todo el objeto por si acaso
+    })
+  }
+
+  // Manejar el scroll del carrusel para actualizar la selección automáticamente
+  const handleScrollEnd = (event) => {
+    if (!activeRentals || activeRentals.length === 0) return
+    
+    const x = event.nativeEvent.contentOffset.x
+    // Ajuste fino para el cálculo del índice
+    const index = Math.round(x / SNAP_INTERVAL)
+    
+    // Asegurar que el índice esté dentro de los límites
+    const safeIndex = Math.max(0, Math.min(index, activeRentals.length - 1))
+    
+    setActiveIndex(safeIndex) // Actualizamos el índice visual
+
+    const rental = activeRentals[safeIndex]
+    
+    // Solo actualizar si cambió
+    if (rental && (!selectedRental || (rental.contract_id !== selectedRental.contract_id && rental.id !== selectedRental.id))) {
+      setSelectedRental(rental)
+    }
+  }
 
   return (
     <View style={styles.container}>
@@ -165,30 +244,7 @@ const HomeScreen= () => {
       >
         <View style={styles.headerCircle} />
 
-        {/* Top bar inside header */}
-        <View style={styles.headerTopRow}>
-          <TouchableOpacity
-            style={styles.headerIconBtn}
-            onPress={() => navigation.navigate("Profile")}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.headerIconEmoji}>👤</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>RentMatch</Text>
-          <TouchableOpacity style={styles.headerIconBtn} onPress={() => {}}>
-            <IconComponent name="bell" />
-          </TouchableOpacity>
-        </View>
-
-        {showArrow && (
-          <Animated.View style={[styles.arrowButtonContainer]}>
-            <TouchableOpacity style={styles.arrowButton} onPress={toggleExpand} activeOpacity={0.85}>
-              <Animated.Text style={[styles.arrowIcon, { transform: [{ rotate: arrowRotate }] }]}>
-                <IconComponent name="arrow-down" />
-              </Animated.Text>
-            </TouchableOpacity>
-          </Animated.View>
-        )}
+        {/* El botón de flecha se movió fuera para que pueda sobresalir */}
 
         {isExpanded && (
           <View style={styles.menuContent}>
@@ -201,14 +257,14 @@ const HomeScreen= () => {
               </TouchableOpacity>
             </View>
             <View style={styles.row}>
-              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => navigation.navigate("Incidencias")}>
+              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => handleAction("Incidencias")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#e91c1cff" }}>
                   <IconComponent name="calendar" />
                 </View>
                 <Text style={styles.logoutText}>Reportar Incidencias</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => navigation.navigate("FinalState")}>
+              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => handleAction("FinalState")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0" }}>
                   <IconComponent name="home" />
                 </View>
@@ -216,13 +272,13 @@ const HomeScreen= () => {
               </TouchableOpacity>
             </View>
             <View style={styles.row}>
-               <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate("Peritaje")}>
+               <TouchableOpacity style={styles.logoutButton} onPress={() => handleAction("Peritaje")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951" }}>
                   <IconComponent name="inspection" />
                 </View>
                 <Text style={styles.logoutText}>Solicitar peritaje</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.logoutButton} onPress={() => navigation.navigate("InitialState")}>
+              <TouchableOpacity style={styles.logoutButton} onPress={() => handleAction("InitialState")}>
                 <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
                   <IconComponent name="form-icon" />
                 </View>
@@ -241,6 +297,25 @@ const HomeScreen= () => {
         )}
       </Animated.View>
 
+      {/* Botón de flecha FLOTANTE fuera del header para sobresalir */}
+      {showArrow && (
+        <Animated.View 
+          style={[
+            styles.arrowButtonContainer, 
+            { 
+              top: animatedHeight, // Sigue la altura del header
+              transform: [{ translateY: -responsiveWidth(7) }] // Sube la mitad de su altura para quedar centrado en el borde
+            }
+          ]}
+        >
+          <TouchableOpacity style={styles.arrowButton} onPress={toggleExpand} activeOpacity={0.9}>
+            <Animated.Text style={[styles.arrowIcon, { transform: [{ rotate: arrowRotate }] }]}>
+              <IconComponent name="arrow-down" />
+            </Animated.Text>
+          </TouchableOpacity>
+        </Animated.View>
+      )}
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         scrollEnabled={true}
@@ -252,7 +327,6 @@ const HomeScreen= () => {
             onRefresh={onRefresh}
             colors={["#FF5A1F"]}
             tintColor="#FF5A1F"
-            
           />
         }
       >
@@ -261,6 +335,133 @@ const HomeScreen= () => {
             <Text style={styles.greeting}>Hola, {firstName || "Usuario"}</Text>
             <Text style={styles.question}>¿Qué deseas hacer hoy?</Text>
           </View>
+
+          {/* Carrusel de Alquileres Activos */}
+          {loading ? (
+            <View style={styles.loadingActiveRentals}>
+              <ActivityIndicator size="large" color="#FF5A1F" />
+              <Text style={styles.loadingText}>Cargando alquileres...</Text>
+            </View>
+          ) : activeRentals && activeRentals.length > 0 ? (
+            <View style={styles.activeRentalsSection}>
+              <Text style={styles.sectionTitleSmall}>Alquileres({activeRentals.length})</Text>
+              <FlatList
+                ref={flatListRef}
+                data={activeRentals}
+                keyExtractor={(item, index) => item.contract_id || item.id || `rental-${index}`}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                scrollEnabled={true}
+                
+                // Configuración de Snapping (Carousel)
+                snapToInterval={SNAP_INTERVAL}
+                decelerationRate="fast"
+                snapToAlignment="start"
+                contentContainerStyle={{
+                  gap: SPACING,
+                  paddingBottom: responsiveHeight(1),
+                }}
+                
+                // Evento de scroll para animación fluida de los dots
+                onScroll={Animated.event(
+                  [{ nativeEvent: { contentOffset: { x: scrollX } } }],
+                  { useNativeDriver: false }
+                )}
+                scrollEventThrottle={16}
+
+                onMomentumScrollEnd={handleScrollEnd}
+                onScrollEndDrag={handleScrollEnd}
+
+                renderItem={({ item, index }) => { // Agregamos index aquí
+                  const p = getProp(item)
+                  const title = `${capitalize(p.type)}`
+                  const ubicacion = [p.address, p.neighborhood].filter(Boolean).join(", ")
+                  
+                  // Usamos el índice para determinar si es el seleccionado visualmente
+                  const isSelected = index === activeIndex
+
+                  return (
+                    <TouchableOpacity
+                      style={[
+                        styles.rentalCarouselCard,
+                        isSelected && styles.selectedRentalCard
+                      ]}
+                      activeOpacity={1}
+                      onPress={() => {
+                        // Si tocan uno lateral, scrollear hacia él
+                        if (!isSelected) {
+                          if (flatListRef.current) {
+                            flatListRef.current.scrollToOffset({
+                              offset: index * SNAP_INTERVAL,
+                              animated: true
+                            })
+                            setActiveIndex(index)
+                            setSelectedRental(item)
+                          }
+                        }
+                      }}
+                    >
+                      <View style={styles.cardRow}>
+                        <View style={styles.cardInfo}>
+                          <Text style={styles.carouselCardTitle} numberOfLines={1}>{title}</Text>
+                          <Text style={styles.carouselCardLocation} numberOfLines={1}>📍 {ubicacion}</Text>
+                        </View>
+                        
+                        <View style={styles.cardPriceContainer}>
+                          <Text style={styles.carouselCardPrice}>{formatCurrency(p.price, p.currency)}</Text>
+                          {isSelected && (
+                            <View style={styles.selectedTag}>
+                              <Text style={styles.selectedTagText}>Activo</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  )
+                }}
+              />
+              
+              {/* Indicadores de Paginación (Dots) con Transición Fluida */}
+              <View style={styles.paginationContainer}>
+                {activeRentals.map((_, index) => {
+                  const inputRange = [
+                    (index - 1) * SNAP_INTERVAL,
+                    index * SNAP_INTERVAL,
+                    (index + 1) * SNAP_INTERVAL,
+                  ]
+
+                  const dotWidth = scrollX.interpolate({
+                    inputRange,
+                    outputRange: [6, 20, 6],
+                    extrapolate: 'clamp',
+                  })
+
+                  const dotColor = scrollX.interpolate({
+                    inputRange,
+                    outputRange: ['#E5E7EB', '#FF5A1F', '#E5E7EB'],
+                    extrapolate: 'clamp',
+                  })
+
+                  return (
+                    <Animated.View
+                      key={index}
+                      style={[
+                        styles.paginationDot,
+                        { 
+                          width: dotWidth, 
+                          backgroundColor: dotColor 
+                        }
+                      ]}
+                    />
+                  )
+                })}
+              </View>
+            </View>
+          ) : (
+            <View style={styles.noActiveRentals}>
+              <Text style={styles.noActiveRentalsText}>No tienes alquileres activos</Text>
+            </View>
+          )}
 
           {/* Welcome banner */}
           <View style={styles.welcomeCard}>
@@ -273,8 +474,9 @@ const HomeScreen= () => {
             </Text>
           </View>
 
+          {/* Options Grid */}
           <View style={styles.optionsGrid}>
-            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("Incidencias")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Incidencias")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFE3E3" }}>
                 <IconComponent name="calendar" />
               </View>
@@ -282,7 +484,7 @@ const HomeScreen= () => {
               <Text style={styles.optionSubtitle}>Incidencias</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("InitialState")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("InitialState")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#E6E8FF" }}>
                 <IconComponent name="home" />
               </View>
@@ -290,7 +492,7 @@ const HomeScreen= () => {
               <Text style={styles.optionSubtitle}>Estado inicial</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("Peritaje")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Peritaje")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFF2CC" }}>
                 <IconComponent name="inspection" />
               </View>
@@ -298,7 +500,7 @@ const HomeScreen= () => {
               <Text style={styles.optionSubtitle}>Peritaje</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={() => navigation.navigate("FinalState")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("FinalState")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
                 <IconComponent name="form-icon" />
               </View>
@@ -307,104 +509,51 @@ const HomeScreen= () => {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.rentalsSection}>
-            <Text style={styles.sectionTitle}>Mis Alquileres</Text>
-
-            <View style={styles.tabsContainer}>
-              <TouchableOpacity 
-                style={[styles.tab, activeTab === 'active' && styles.activeTab]}
-                onPress={() => setActiveTab('active')}
-              >
-                <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>
-                  Activos ({activeRentals.length})
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.tab, activeTab === 'history' && styles.activeTab]}
-                onPress={() => setActiveTab('history')}
-              >
-                <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
-                  Historial ({rentalHistory.length})
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color="#FF5A1F" />
-                <Text style={styles.loadingText}>Cargando alquileres...</Text>
+          {/* Botones de Acciones Secundarias (Historial y Peritajes) */}
+          <View style={styles.secondaryActionsContainer}>
+            <TouchableOpacity 
+              style={styles.secondaryButton}
+              onPress={() => {
+                const params = selectedRental ? {
+                  contract_id: selectedRental.contract_id || selectedRental.id,
+                  title: selectedRental.property_type ? `${capitalize(selectedRental.property_type)}` : "Propiedad",
+                  rentalData: selectedRental
+                } : {}
+                navigation.navigate('RentalHistory', params)
+              }} 
+            >
+              <View style={styles.secondaryButtonIcon}>
+                <IconComponent name="home" style={{ color: '#6B7280', fontSize: 20 }} />
               </View>
-            ) : error ? (
-              <View style={styles.errorContainer}>
-                <IconComponent name="alert-circle" style={styles.errorIcon} />
-                <Text style={styles.errorText}>{error}</Text>
-                <TouchableOpacity 
-                  style={styles.retryButton}
-                  onPress={() => loadRentals?.()}
-                >
-                  <Text style={styles.retryButtonText}>Reintentar</Text>
-                </TouchableOpacity>
+              <View style={styles.secondaryButtonContent}>
+                <Text style={styles.secondaryButtonTitle}>Historial de Alquileres</Text>
+                <Text style={styles.secondaryButtonSubtitle}>Ver contratos finalizados</Text>
               </View>
-            ) : rentalsToShow.length === 0 ? (
-              <View style={styles.emptyContainer}>
-                <IconComponent name="home" style={styles.emptyIcon} />
-                <Text style={styles.emptyText}>
-                  {activeTab === 'active'
-                    ? 'No tienes alquileres activos'
-                    : 'No hay historial de alquileres'}
-                </Text>
+              <IconComponent name="arrow-right" style={{ color: '#9CA3AF', fontSize: 16 }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.secondaryButton}
+              onPress={() => {
+                const params = selectedRental ? {
+                  contract_id: selectedRental.contract_id || selectedRental.id,
+                  title: selectedRental.property_type ? `${capitalize(selectedRental.property_type)}` : "Propiedad",
+                  rentalData: selectedRental
+                } : {}
+                navigation.navigate('Peritajes', params)
+              }}
+            >
+              <View style={styles.secondaryButtonIcon}>
+                <IconComponent name="inspection" style={{ color: '#6B7280', fontSize: 20 }} />
               </View>
-            ) : (
-              rentalsToShow.map((rental) => {
-                const p = getProp(rental)
-                const title = `${capitalize(p.type)} · ${p.neighborhood}`
-                const ubicacion = [p.address, p.neighborhood, p.city].filter(Boolean).join(", ")
-                const status = rental?.status?.toLowerCase?.() || ""
-                const statusStyle =
-                  status === "active"
-                    ? styles.statusActive
-                    : status === "pending"
-                    ? styles.statusPending
-                    : status === "completed" || status === "finished"
-                    ? styles.statusDone
-                    : styles.statusDefault
-
-                return (
-                  <View key={rental.contract_id || rental.id} style={styles.rentalCard}>
-                    <View style={styles.rentalHeaderRow}>
-                      <Text style={styles.rentalTitle}>{title}</Text>
-                      <View style={[styles.statusChip, statusStyle]}>
-                        <Text style={styles.statusChipText}>{capitalize(rental.status)}</Text>
-                      </View>
-                    </View>
-                    <Text style={styles.rentalLocation}>Ubicación: {ubicacion}</Text>
-                    <Text style={styles.rentalDate}>Fecha Inicio: {formatDate(rental.start_date)}</Text>
-                    {rental.end_date && (
-                      <Text style={styles.rentalDate}>Fecha Fin: {formatDate(rental.end_date)}</Text>
-                    )}
-                    <Text style={styles.rentalPrice}>Presupuesto: {formatCurrency(p.price, p.currency)}</Text>
-                    <Text style={styles.rentalDetails}>Ambientes: {p.rooms}</Text>
-                    <Text style={styles.rentalDetails}>Baños: {p.bathrooms}</Text>
-                    {p.furnished && <Text style={styles.rentalDetails}>✅ Amueblado</Text>}
-                    {p.pets_allowed && <Text style={styles.rentalDetails}>🐕 Mascotas permitidas</Text>}
-                    {p.amenities.length > 0 && (
-                      <Text style={styles.rentalDetails}>Amenities: {p.amenities.join(", ")}</Text>
-                    )}
-                    {p.notes && <Text style={styles.rentalNotes}>Nota: {p.notes}</Text>}
-
-                    <View style={styles.cardActionsRow}>
-                      <TouchableOpacity style={styles.outlineBtn} onPress={() => {}}>
-                        <Text style={styles.outlineBtnText}>Ver detalles</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={styles.notificationButton}>
-                        <IconComponent name="bell" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                )
-              })
-            )}
+              <View style={styles.secondaryButtonContent}>
+                <Text style={styles.secondaryButtonTitle}>Mis Peritajes</Text>
+                <Text style={styles.secondaryButtonSubtitle}>Consultar estado de solicitudes</Text>
+              </View>
+              <IconComponent name="arrow-right" style={{ color: '#9CA3AF', fontSize: 16 }} />
+            </TouchableOpacity>
           </View>
+
         </View>
       </ScrollView>
     </View>
@@ -448,6 +597,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 0.3,
   },
+  sectionTitleSmall: {
+    fontSize: responsiveFontSize(2),
+    marginLeft: responsiveWidth(2),
+    color: "#1f2937e3",
+      fontFamily: "Poppins_600SemiBold",
+  },
   headerIconBtn: {
     width: responsiveWidth(9),
     height: responsiveWidth(9),
@@ -461,30 +616,31 @@ const styles = StyleSheet.create({
   },
   arrowButtonContainer: {
     position: "absolute",
-    bottom: responsiveHeight(1),
     left: 0,
     right: 0,
     alignItems: "center",
-    zIndex: 10,
+
+    zIndex: 1001, // Por encima del header
   },
   arrowButton: {
-    width: responsiveWidth(16),
-    height: responsiveWidth(10),
-    borderRadius: responsiveWidth(5),
-    backgroundColor: "rgba(255,255,255,0.25)",
+    width: responsiveWidth(14),
+    height: responsiveWidth(14),
+    borderRadius: responsiveWidth(7),
+    backgroundColor: "#FF5A1F", // Mismo naranja para parecer integrado
+    borderWidth: 4, // Borde blanco grueso para separar visualmente
+    borderColor: "#fff",
     justifyContent: "center",
     alignItems: "center",
-    backdropFilter: "blur(4px)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 5,
+    elevation: 6,
   },
   arrowIcon: {
-    fontSize: responsiveFontSize(5),
-    color: "#fefefeff",
+    fontSize: responsiveFontSize(3),
+    color: "#fff",
     fontWeight: "bold",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
   },
   menuContent: {
     position: "absolute",
@@ -510,7 +666,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: responsiveWidth(6),
+    paddingHorizontal: responsiveWidth(5),
   },
   header: {
     marginBottom: responsiveHeight(3),
@@ -518,6 +674,7 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: responsiveFontSize(2.8),
     fontFamily: "Poppins_600SemiBold",
+    marginTop: responsiveHeight(3),
     color: "#4B4B4D",
     marginHorizontal: "auto",
     shadowColor: "#000",
@@ -610,170 +767,144 @@ const styles = StyleSheet.create({
     color: "#4B4B4D",
     textAlign: "center",
   },
-  rentalsSection: {
-    flex: 1,
+  activeRentalsSection: {
+    marginBottom: responsiveHeight(3),
   },
-  sectionTitle: {
-    fontSize: responsiveFontSize(2.6),
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: responsiveHeight(2),
-  },
-  tabsContainer: {
-    flexDirection: "row",
-    backgroundColor: "#F1F4FF",
-    borderRadius: 8,
-    padding: 4,
-    marginBottom: responsiveHeight(2),
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: responsiveHeight(1),
-    alignItems: "center",
-    borderRadius: 6,
-  },
-  activeTab: {
-    backgroundColor: "#B4BEE2",
-  },
-  tabText: {
-    fontSize: responsiveFontSize(1.8),
-    fontFamily: "Poppins_600SemiBold",
-  },
-  activeTabText: {
-    color: "#333",
-    fontFamily: "Poppins_600SemiBold",
-  },
-  rentalCard: {
-    marginBottom: responsiveHeight(2),
-    backgroundColor: "#F1F4FF",
-    borderRadius: 12,
-    padding: responsiveWidth(4),
-    paddingBottom: responsiveHeight(6),
+  rentalCarouselCard: {
+    width: CARD_WIDTH,
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: responsiveWidth(5),
+    paddingVertical: responsiveHeight(2.5),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    elevation: 3,
-    position: "relative",
+    elevation: 2,
+    opacity: 0.6, // Un poco transparente cuando no está seleccionado
+    transform: [{ scale: 0.95 }], // Un poco más chico
   },
-  rentalHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: responsiveHeight(0.5),
+  selectedRentalCard: {
+    borderColor: "#FF5A1F",
+    borderWidth: 1.5,
+    backgroundColor: "#FFF8F6",
+    shadowColor: "#FF5A1F",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    opacity: 1, // Totalmente visible
+    transform: [{ scale: 1 }], // Tamaño normal
   },
-  statusChip: {
-    paddingHorizontal: responsiveWidth(3),
-    paddingVertical: responsiveHeight(0.5),
-    borderRadius: 20,
-    borderWidth: 1,
+  cardRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  statusChipText: {
-    fontSize: responsiveFontSize(1.3),
-    fontWeight: "700",
+  cardInfo: {
+    flex: 1,
+    paddingRight: responsiveWidth(2),
   },
-  statusActive: {
-    backgroundColor: "#E6F9EF",
-    borderColor: "#A7F3D0",
+  cardPriceContainer: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    minWidth: responsiveWidth(25),
   },
-  statusPending: {
-    backgroundColor: "#FEF9C3",
-    borderColor: "#FDE68A",
-  },
-  statusDone: {
-    backgroundColor: "#E5E7EB",
-    borderColor: "#D1D5DB",
-  },
-  statusDefault: {
-    backgroundColor: "#F3F4F6",
-    borderColor: "#E5E7EB",
-  },
-  rentalTitle: {
-    fontSize: responsiveFontSize(2.2),
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: responsiveHeight(0.5),
-    fontFamily: "Poppins_600SemiBold",
-  },
-  rentalLocation: {
-    fontSize: responsiveFontSize(1.6),
-    color: "#666",
-    marginBottom: responsiveHeight(0.5),
-    fontFamily: "Poppins_400Regular",
-  },
-  rentalDate: {
-    fontSize: responsiveFontSize(1.6),
-    color: "#666",
-    marginBottom: responsiveHeight(0.5),
-    fontFamily: "Poppins_400Regular",
-  },
-  rentalPrice: {
-    fontSize: responsiveFontSize(1.8),
-    color: "#FF5A1F",
-    fontWeight: "600",
-    marginBottom: responsiveHeight(0.5),
-    fontFamily: "Poppins_600SemiBold",
-  },
-  rentalDetails: {
-    fontSize: responsiveFontSize(1.6),
-    color: "#666",
-    marginBottom: responsiveHeight(0.3),
-    fontFamily: "Poppins_400Regular",
-  },
-  rentalNotes: {
-    fontSize: responsiveFontSize(1.5),
-    color: "#999",
-    fontStyle: "italic",
-    marginTop: responsiveHeight(0.5),
-    fontFamily: "Poppins_400Regular",
-  },
-  cardActionsRow: {
-    position: "absolute",
-    bottom: responsiveHeight(1.5),
-    left: responsiveWidth(4),
-    right: responsiveWidth(4),
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  outlineBtn: {
-    paddingVertical: responsiveHeight(1),
-    paddingHorizontal: responsiveWidth(4),
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#D1D5DB",
-    backgroundColor: "#fff",
-  },
-  outlineBtnText: {
-    color: "#111827",
-    fontWeight: "600",
-    fontSize: responsiveFontSize(1.6),
-  },
-  actionButtons: {
-    position: "absolute",
-    bottom: responsiveHeight(2),
-    right: responsiveWidth(4),
-    flexDirection: "row",
-  },
-  notificationButton: {
-    width: responsiveWidth(10),
-    height: responsiveWidth(10),
-    backgroundColor: "#FF5A1F",
-    borderRadius: responsiveWidth(5),
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: responsiveWidth(2),
-  },
-  logoutButton: {
-    backgroundColor: "#FF5A1F",
-    fontFamily: "Poppins_600SemiBold",
-    borderRadius: 8,
-    alignItems: "center",
-  },
-  logoutText: {
-    color: "#fff",
+  carouselCardTitle: {
     fontSize: responsiveFontSize(2),
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
+    color: "#1F2937",
+    marginBottom: 2,
+  },
+  carouselCardLocation: {
+    fontSize: responsiveFontSize(1.5),
+    fontFamily: 'Poppins_400Regular',
+    color: "#6B7280",
+  },
+  carouselCardPrice: {
+    fontSize: responsiveFontSize(2),
+    fontFamily: 'Poppins_700Bold',
+    color: "#FF5A1F",
+    marginBottom: 4,
+  },
+  selectedTag: {
+    backgroundColor: "#FF5A1F",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  selectedTagText: {
+    color: "#fff",
+    fontSize: responsiveFontSize(1.2),
+    fontFamily: 'Poppins_600SemiBold',
+  },
+  tapToSelectText: {
+    color: "#9CA3AF",
+    fontSize: responsiveFontSize(1.2),
+    fontFamily: 'Poppins_400Regular',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: responsiveHeight(1.5),
+    gap: 6,
+  },
+  paginationDot: {
+    height: 6,
+    borderRadius: 3,
+  },
+  paginationDotActive: {
+    width: 20,
+    backgroundColor: '#FF5A1F',
+  },
+  
+  paginationDotInactive: {
+    width: 6,
+    backgroundColor: '#E5E7EB',
+  },
+  secondaryActionsContainer: {
+    marginTop: responsiveHeight(1),
+    marginBottom: responsiveHeight(4),
+    gap: responsiveHeight(2),
+  },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: responsiveWidth(4),
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  secondaryButtonIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: responsiveWidth(3),
+  },
+  secondaryButtonContent: {
+    flex: 1,
+  },
+  secondaryButtonTitle: {
+    fontSize: responsiveFontSize(1.8),
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#374151',
+  },
+  secondaryButtonSubtitle: {
+    fontSize: responsiveFontSize(1.4),
+    fontFamily: 'Poppins_400Regular',
+    color: '#9CA3AF',
   },
   errorContainer: {
     flex: 1,
@@ -795,6 +926,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   loadingContainer: {
+    padding: responsiveHeight(4),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingActiveRentals: {
     padding: responsiveHeight(4),
     alignItems: 'center',
     justifyContent: 'center',
@@ -837,6 +973,16 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'Poppins_400Regular',
     textAlign: 'center',
+  },
+  noActiveRentals: {
+    padding: responsiveHeight(3),
+    alignItems: 'center',
+    marginBottom: responsiveHeight(2),
+  },
+  noActiveRentalsText: {
+    fontSize: responsiveFontSize(1.6),
+    color: '#999',
+    fontFamily: 'Poppins_400Regular',
   },
 })
 export default HomeScreen

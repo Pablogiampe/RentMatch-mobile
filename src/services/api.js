@@ -1,10 +1,8 @@
 import axios from 'axios';
-import { API_URL } from '@env';
-
-console.log('🔗 API_URL cargada:', API_URL); // Para debug
+import AsyncStorage from '@react-native-async-storage/async-storage'; // ✅ Verificá esta línea
 
 const api = axios.create({
-  baseURL: API_URL || 'http://192.168.1.36:5000/api',
+  baseURL: 'https://rentmatch-backend.onrender.com/api',
   timeout: 10000,
   headers: {
     'Accept': 'application/json',
@@ -12,75 +10,34 @@ const api = axios.create({
   },
 });
 
-// Variable para cachear el último token leído (con timestamp)
-let cachedToken = null;
-let cacheTimestamp = 0;
-const CACHE_DURATION = 1000; // 1 segundo
-
-// Interceptor para agregar el token
+// Interceptor para agregar token
 api.interceptors.request.use(
   async (config) => {
     try {
-      // ✅ CAMBIAR 'authToken' por 'token'
-      const now = Date.now();
-      
-      // Si el cache tiene más de 1 segundo, refrescar
-      if (!cachedToken || (now - cacheTimestamp) > CACHE_DURATION) {
-        cachedToken = await AsyncStorage.getItem('token'); // ✅ AQUÍ: 'token' no 'authToken'
-        cacheTimestamp = now;
-        console.log('🔄 Token refrescado desde AsyncStorage');
-      }
-      
-      if (cachedToken) {
-        config.headers.Authorization = `Bearer ${cachedToken}`;
-        
-        // ✅ LOG: Mostrar el exp del token para verificar
-        try {
-          const payload = JSON.parse(atob(cachedToken.split('.')[1]));
-          const exp = new Date(payload.exp * 1000);
-          const iat = new Date(payload.iat * 1000);
-          console.log('✅ Token agregado a la petición');
-          console.log('📅 Emitido:', iat.toLocaleString());
-          console.log('🕐 Expira:', exp.toLocaleString());
-        } catch (e) {
-          console.log('✅ Token agregado a la petición');
-        }
-      } else {
-        console.warn('⚠️ No se encontró token de autenticación');
+      const token = await AsyncStorage.getItem('token'); // Acá puede estar el error
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
       }
     } catch (error) {
-      console.error('❌ Error al obtener token:', error);
+      console.error('Error obteniendo token:', error);
     }
-    
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Interceptor para manejar errores
+// Interceptor para manejar 401
 api.interceptors.response.use(
-  (response) => {
-    console.log('✅ Respuesta exitosa:', response.config.url);
-    return response;
-  },
+  (response) => response,
   async (error) => {
-    console.error('❌ Error en la petición:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.response?.data?.message || error.message
-    });
-    
-    // ✅ Si el error es 401 o 403, limpiar cache y storage
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      console.warn('⚠️ Token inválido o expirado, limpiando...');
-      cachedToken = null;
-      cacheTimestamp = 0;
-      await AsyncStorage.removeItem('token'); // ✅ AQUÍ también: 'token' no 'authToken'
-      await AsyncStorage.removeItem('user');
+    if (error.response?.status === 401) {
+      try {
+        await AsyncStorage.removeItem('token');
+        await AsyncStorage.removeItem('user');
+      } catch (e) {
+        console.error('Error limpiando storage:', e);
+      }
     }
-    
     return Promise.reject(error);
   }
 );

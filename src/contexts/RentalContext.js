@@ -1,113 +1,90 @@
 "use client"
 
 import React, { createContext, useState, useContext, useCallback } from "react"
-import api from '../services/api'
 import AsyncStorage from '@react-native-async-storage/async-storage'
-import { all } from "axios"
+import axios from 'axios'
+import { useAuth } from "./AuthContext"
 
 const RentalContext = createContext()
 
-const rentalService = {
-  getRentalHistory: async () => {
-    const url = `/mobile-user/traer-historial`
-    
-    // ✅ Obtener el token y el user_id
-    const token = await AsyncStorage.getItem('token')
-    const userStr = await AsyncStorage.getItem('user')
-    const user = userStr ? JSON.parse(userStr) : null
-    
-    console.log('\n🔍 ===== DEBUG INFO =====')
-    console.log('Token existe?', token ? '✅ SÍ' : '❌ NO')
-    console.log('User ID:', user?.id)
-    console.log('URL completa:', api.defaults.baseURL + url)
-    console.log('🔍 =======================\n')
-    
-    try {
-      // ✅ Hacer la petición manualmente con headers visibles
-      const res = await api.get(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      })
-      
-      console.log('\n✅ ===== RESPUESTA EXITOSA =====')
-      console.log('Status:', res.status)
-      console.log('Success:', res.data.success)
-      console.log('Cantidad de registros:', res.data.data?.length)
-      
-      // ✅ Mostrar TODO el primer registro
-      if (res.data.data && res.data.data.length > 0) {
-        console.log('\n📝 PRIMER REGISTRO COMPLETO:')
-        console.log(JSON.stringify(res.data.data[0], null, 2))
-        
-        console.log('\n🔑 CAMPOS CLAVE:')
-        console.log('  - id:', res.data.data[0].id)
-        console.log('  - contract_id:', res.data.data[0].contract_id)
-        console.log('  - property_id:', res.data.data[0].property_id)
-        console.log('  - address:', res.data.data[0].address)
-        console.log('  - address_line:', res.data.data[0].address_line)
-        console.log('  - city:', res.data.data[0].city)
-        console.log('  - neighborhood:', res.data.data[0].neighborhood)
-        console.log('  - property_type:', res.data.data[0].property_type)
-        console.log('  - rent_amount:', res.data.data[0].rent_amount)
-      }
-      console.log('✅ ================================\n')
-      
-      return res.data?.data || []
-    } catch (error) {
-      console.error('\n❌ ===== ERROR =====')
-      console.error('Status:', error.response?.status)
-      console.error('Message:', error.response?.data?.message || error.message)
-      console.error('Headers enviados:', error.config?.headers)
-      console.error('❌ ===================\n')
-      throw error
-    }
-  },
-}
-
 export const RentalProvider = ({ children }) => {
+  const { user } = useAuth()
   const [activeRentals, setActiveRentals] = useState([])
   const [rentalHistory, setRentalHistory] = useState([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
   const loadRentals = useCallback(async () => {
+    if (!user?.id) {
+      console.log('⚠️ No hay usuario, no se cargan alquileres')
+      return
+    }
+
+    setLoading(true)
+    setError(null)
+
     try {
-      setLoading(true)
-      setError(null)
-
-      const allRentals = await rentalService.getRentalHistory()
+      console.log('📡 Cargando alquileres para usuario:', user.id)
+      const token = await AsyncStorage.getItem('token')
       
-      console.log('\n📊 ===== RESUMEN =====')
-      console.log('Total recibidos:', allRentals.length)
-      console.log('Primer alquiler tiene address?', allRentals[0]?.address ? '✅ SÍ' : '❌ NO')
-      console.log('📊 ====================\n')
+      if (!token) {
+        console.log('⚠️ No hay token')
+        return
+      }
 
-      // ✅ Filtrar activos
-      const active = allRentals.filter(r => {
-        const status = String(r.status || '').toLowerCase()
-        return ['active', 'activo', 'signed', 'in_progress'].includes(status)
-      })
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      }
 
-      // ✅ Filtrar historial
-      const history = allRentals.filter(r => {
-        const status = String(r.status || '').toLowerCase()
-        return ['completed', 'finalizado', 'pending_deposit', 'cancelled', 'canceled'].includes(status)
-      })
-console.log ('deposito pagado' ,history  )
-      console.log('Activos:', active.length)
-      console.log('Historial:', history.length)
+      const baseURL = "https://rentmatch-backend.onrender.com"
 
-      setActiveRentals(active)
-      setRentalHistory(history)
-    } catch (e) {
-      console.error('❌ Error al cargar alquileres:', e)
-      setError('No se pudieron cargar los alquileres. Intenta nuevamente.')
+      // 1. Cargar Alquileres Activos
+      // Usamos el endpoint bajo /mobile-user que suele usar el token para identificar al usuario
+      const activeResponse = await axios.post(
+        `${baseURL}/api/mobile-user/profile`,
+        {},
+        config
+      )
+
+      console.log('✅ Respuesta alquileres activos:', activeResponse.data)
+
+      if (activeResponse.data && Array.isArray(activeResponse.data.data)) {
+        setActiveRentals(activeResponse.data.data)
+      } else if (Array.isArray(activeResponse.data)) {
+        setActiveRentals(activeResponse.data)
+      } else {
+        setActiveRentals([])
+      }
+
+      // 2. Cargar Historial
+      try {
+        const historyResponse = await axios.get(
+          `${baseURL}/api/mobile-user/traer-historial`,
+          config
+        )
+        
+        if (historyResponse.data && Array.isArray(historyResponse.data.data)) {
+          setRentalHistory(historyResponse.data.data)
+        } else if (Array.isArray(historyResponse.data)) {
+          setRentalHistory(historyResponse.data)
+        }
+      } catch (historyError) {
+        console.log('ℹ️ No se pudo cargar el historial:', historyError.message)
+        setRentalHistory([])
+      }
+
+    } catch (error) {
+      console.error('❌ Error al cargar alquileres:', error)
+      console.error('Detalles:', error.response?.data || error.message)
+      setError(error.response?.data?.message || 'Error al cargar los alquileres')
+      setActiveRentals([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user?.id])
 
   return (
     <RentalContext.Provider value={{ activeRentals, rentalHistory, loading, error, loadRentals }}>

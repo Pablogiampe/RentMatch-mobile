@@ -7,7 +7,7 @@ const IncidenciasSvg = ({ style }) => {
 
   return (
     <Svg
-      width="100%"
+      width="115%"
       height="100%"
       viewBox="0 0 428 926"
       preserveAspectRatio="xMidYMid slice"

@@ -94,7 +94,7 @@ const LoginScreen = ({ navigation }) => {
         setLoading(false)
         
         // ✅ Navegar normalmente dentro del mismo stack
-        navigation.navigate('Home')
+        navigation.navigate('HomeScreen')
       })
 
     } catch (error) {
