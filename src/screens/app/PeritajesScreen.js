@@ -1,61 +1,74 @@
 import { useEffect, useState } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator } from "react-native"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StatusBar } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
+import { useAuth } from "../../contexts/AuthContext"
+import IconComponent from "../../../RentMatch_mobile/assets/icons"
+import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 
 const ORANGE = "#FF5A1F"
 
 const PeritajesScreen = ({ navigation }) => {
+  const { token, session, user } = useAuth()
+  const activeToken = token || session
   const [peritajes, setPeritajes] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  })
+
   useEffect(() => {
-    fetchPeritajes()
-  }, [])
+    if (activeToken && user?.id) {
+      fetchPeritajes()
+    }
+  }, [activeToken, user])
 
   const fetchPeritajes = async () => {
     try {
-      // TODO: Llamar a tu API
-      // const response = await api.get('/peritajes')
-      // setPeritajes(response.data)
+      console.log("🔄 Obteniendo peritajes para tenant:", user.id)
+      const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-Expertise/GetExpertiseByTenant", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${activeToken}`
+        },
+        body: JSON.stringify({
+          tenant_id: user.id
+        })
+      })
+
+      const data = await response.json()
       
-      // Mock data temporal
-      setTimeout(() => {
-        setPeritajes([
-          {
-            id: "PER-001",
-            property: "Departamento en Belgrano",
-            address: "Av. Cabildo 2450",
-            date: "2024-11-20",
-            status: "completed", // completed | pending | scheduled
-            type: "Ingreso",
-            inspector: "Juan Pérez",
-            issues: 2,
-          },
-          {
-            id: "PER-002",
-            property: "Casa en Palermo",
-            address: "Costa Rica 4500",
-            date: "2024-11-15",
-            status: "completed",
-            type: "Egreso",
-            inspector: "María González",
-            issues: 0,
-          },
-          {
-            id: "PER-003",
-            property: "Departamento en Belgrano",
-            address: "Av. Cabildo 2450",
-            date: "2024-11-25",
-            status: "scheduled",
-            type: "Periódico",
-            inspector: "Carlos Ruiz",
-            issues: null,
-          },
-        ])
-        setLoading(false)
-      }, 500)
+      if (!response.ok) {
+        throw new Error(data.message || "Error al obtener peritajes")
+      }
+
+      console.log("📦 Peritajes recibidos:", JSON.stringify(data, null, 2))
+
+      // Extraer el array de datos (la respuesta es { success: true, data: [...] })
+      const peritajesList = data.data || []
+
+      const mappedData = peritajesList.map(item => ({
+        id: item.id,
+        // Usamos el 'reason' como título principal ya que describe la solicitud
+        property: item.reason || "Solicitud de Peritaje",
+        // Al no tener dirección, mostramos el ID del contrato recortado
+        address: item.contract_id ? `Contrato: ...${item.contract_id.slice(-8)}` : "Sin contrato asociado",
+        date: item.date || item.created_at,
+        status: "pending", // El backend no devuelve estado aún, asumimos pendiente
+        type: "Solicitud",
+        inspector: "A asignar",
+        issues: null,
+        description: item.description
+      }))
+
+      setPeritajes(mappedData)
     } catch (error) {
-      console.error("Error fetching peritajes:", error)
+      console.error("❌ Error fetching peritajes:", error)
+      Alert.alert("Error", "No se pudieron cargar los peritajes.")
+    } finally {
       setLoading(false)
     }
   }
@@ -63,13 +76,13 @@ const PeritajesScreen = ({ navigation }) => {
   const getStatusStyle = (status) => {
     switch (status) {
       case "completed":
-        return { bg: "#E6F9EF", text: "#10B981", label: "Completado" }
+        return { bg: "#DCFCE7", text: "#166534", label: "Completado" } // Verde suave
       case "scheduled":
-        return { bg: "#FEF9C3", text: "#F59E0B", label: "Programado" }
+        return { bg: "#FEF9C3", text: "#854D0E", label: "Programado" } // Amarillo suave
       case "pending":
-        return { bg: "#FEE2E2", text: "#EF4444", label: "Pendiente" }
+        return { bg: "#FEE2E2", text: "#991B1B", label: "Pendiente" } // Rojo suave
       default:
-        return { bg: "#F3F4F6", text: "#6B7280", label: "Desconocido" }
+        return { bg: "#F3F4F6", text: "#374151", label: "Desconocido" } // Gris
     }
   }
 
@@ -83,7 +96,7 @@ const PeritajesScreen = ({ navigation }) => {
     navigation.navigate("DetallePeritaje", { peritajeId: peritaje.id })
   }
 
-  if (loading) {
+  if (!fontsLoaded || loading) {
     return (
       <View style={styles.centerContainer}>
         <ActivityIndicator size="large" color={ORANGE} />
@@ -94,10 +107,12 @@ const PeritajesScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F5F7FA" />
+      
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
-          <Text style={styles.backIcon}>←</Text>
+          <IconComponent name="back-arrow" style={styles.backIcon} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Mis Peritajes</Text>
         <View style={styles.placeholder} />
@@ -143,19 +158,17 @@ const PeritajesScreen = ({ navigation }) => {
                 key={peritaje.id}
                 style={styles.peritajeCard}
                 onPress={() => handlePeritajePress(peritaje)}
+                activeOpacity={0.7}
               >
                 {/* Header Card */}
                 <View style={styles.cardHeader}>
-                  <View style={styles.cardHeaderLeft}>
-                    <Text style={styles.peritajeId}>{peritaje.id}</Text>
-                    <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-                      <Text style={[styles.statusText, { color: statusInfo.text }]}>
-                        {statusInfo.label}
-                      </Text>
-                    </View>
+                  <View style={styles.idContainer}>
+                     <Text style={styles.peritajeId} numberOfLines={1}>ID: {peritaje.id.slice(0, 8)}...</Text>
                   </View>
-                  <View style={styles.typeBadge}>
-                    <Text style={styles.typeText}>{peritaje.type}</Text>
+                  <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
+                    <Text style={[styles.statusText, { color: statusInfo.text }]}>
+                      {statusInfo.label}
+                    </Text>
                   </View>
                 </View>
 
@@ -163,41 +176,26 @@ const PeritajesScreen = ({ navigation }) => {
                 <Text style={styles.propertyName}>{peritaje.property}</Text>
                 <Text style={styles.propertyAddress}>📍 {peritaje.address}</Text>
 
+                <View style={styles.divider} />
+
                 {/* Details */}
                 <View style={styles.cardDetails}>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Fecha:</Text>
+                    <Text style={styles.detailLabel}>Fecha</Text>
                     <Text style={styles.detailValue}>
                       {new Date(peritaje.date).toLocaleDateString("es-AR")}
                     </Text>
                   </View>
                   <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Perito:</Text>
+                    <Text style={styles.detailLabel}>Perito</Text>
                     <Text style={styles.detailValue}>{peritaje.inspector}</Text>
                   </View>
-                  {peritaje.issues !== null && (
-                    <View style={styles.detailRow}>
-                      <Text style={styles.detailLabel}>Observaciones:</Text>
-                      <Text
-                        style={[
-                          styles.detailValue,
-                          peritaje.issues > 0 ? styles.issuesWarning : styles.issuesOk,
-                        ]}
-                      >
-                        {peritaje.issues === 0 ? "Sin observaciones" : `${peritaje.issues} detectadas`}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-
-                {/* Arrow */}
-                <View style={styles.cardArrow}>
-                  <Text style={styles.arrowIcon}>→</Text>
                 </View>
               </TouchableOpacity>
             )
           })
         )}
+        <View style={{ height: responsiveHeight(10) }} />
       </ScrollView>
 
       {/* Floating Action Button */}
@@ -212,73 +210,88 @@ const PeritajesScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: "#F5F7FA", // Fondo gris claro para resaltar las cards blancas
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#F5F7FA",
   },
   loadingText: {
     marginTop: responsiveHeight(2),
     fontSize: responsiveFontSize(1.8),
-    color: "#666",
+    color: "#6B7280",
+    fontFamily: 'Poppins_400Regular',
   },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: responsiveWidth(6),
+    paddingHorizontal: responsiveWidth(5),
     paddingTop: responsiveHeight(6),
     paddingBottom: responsiveHeight(2),
+    backgroundColor: "#F5F7FA",
   },
   backBtn: {
-    padding: responsiveWidth(2),
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   backIcon: {
-    fontSize: responsiveFontSize(3),
-    color: "#1a1a1a",
+    fontSize: 20,
+    color: "#1F2937",
   },
   headerTitle: {
-    fontSize: responsiveFontSize(2.4),
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontSize: responsiveFontSize(2.2),
+    fontFamily: 'Poppins_700Bold',
+    color: "#1F2937",
   },
   placeholder: {
-    width: responsiveWidth(10),
+    width: 40,
   },
   statsRow: {
     flexDirection: "row",
     gap: responsiveWidth(3),
-    paddingHorizontal: responsiveWidth(6),
+    paddingHorizontal: responsiveWidth(5),
     marginBottom: responsiveHeight(3),
   },
   statCard: {
     flex: 1,
-    backgroundColor: "#F1F4FF",
-    borderRadius: 12,
+    backgroundColor: "#fff",
+    borderRadius: 16,
     padding: responsiveWidth(4),
     alignItems: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   statNumber: {
     fontSize: responsiveFontSize(2.8),
-    fontWeight: "700",
+    fontFamily: 'Poppins_700Bold',
     color: ORANGE,
-    marginBottom: responsiveHeight(0.5),
+    marginBottom: 4,
   },
   statLabel: {
-    fontSize: responsiveFontSize(1.5),
-    color: "#666",
+    fontSize: responsiveFontSize(1.4),
+    color: "#6B7280",
+    fontFamily: 'Poppins_400Regular',
   },
   scrollView: {
     flex: 1,
-    paddingHorizontal: responsiveWidth(6),
+    paddingHorizontal: responsiveWidth(5),
   },
   sectionTitle: {
-    fontSize: responsiveFontSize(1.9),
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontSize: responsiveFontSize(2),
+    fontFamily: 'Poppins_700Bold',
+    color: "#1F2937",
     marginBottom: responsiveHeight(2),
   },
   emptyState: {
@@ -291,128 +304,118 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: responsiveFontSize(2),
-    fontWeight: "700",
-    color: "#1a1a1a",
+    fontFamily: 'Poppins_700Bold',
+    color: "#1F2937",
     marginBottom: responsiveHeight(1),
   },
   emptyText: {
     fontSize: responsiveFontSize(1.6),
-    color: "#666",
+    color: "#6B7280",
     textAlign: "center",
-    lineHeight: responsiveHeight(2.5),
+    fontFamily: 'Poppins_400Regular',
+    lineHeight: 24,
   },
   peritajeCard: {
-    backgroundColor: "#F1F4FF",
-    borderRadius: 12,
-    padding: responsiveWidth(4),
+    backgroundColor: "#fff",
+    borderRadius: 20,
+    padding: responsiveWidth(5),
     marginBottom: responsiveHeight(2),
-    position: "relative",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
   },
   cardHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: responsiveHeight(1.5),
+    marginBottom: 12,
   },
-  cardHeaderLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: responsiveWidth(2),
-  },
-  peritajeId: {
-    fontSize: responsiveFontSize(1.6),
-    fontWeight: "700",
-    color: "#1a1a1a",
-  },
-  statusBadge: {
-    paddingHorizontal: responsiveWidth(2.5),
-    paddingVertical: responsiveHeight(0.4),
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: responsiveFontSize(1.3),
-    fontWeight: "600",
-  },
-  typeBadge: {
-    backgroundColor: ORANGE,
-    paddingHorizontal: responsiveWidth(3),
-    paddingVertical: responsiveHeight(0.5),
+  idContainer: {
+    backgroundColor: "#F9FAFB",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 8,
   },
-  typeText: {
+  peritajeId: {
     fontSize: responsiveFontSize(1.4),
-    fontWeight: "600",
-    color: "#fff",
+    fontFamily: 'Poppins_600SemiBold',
+    color: "#6B7280",
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+  },
+  statusText: {
+    fontSize: responsiveFontSize(1.4),
+    fontFamily: 'Poppins_600SemiBold',
   },
   propertyName: {
-    fontSize: responsiveFontSize(1.9),
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: responsiveHeight(0.5),
+    fontSize: responsiveFontSize(2),
+    fontFamily: 'Poppins_700Bold',
+    color: "#1F2937",
+    marginBottom: 4,
   },
   propertyAddress: {
-    fontSize: responsiveFontSize(1.5),
-    color: "#666",
-    marginBottom: responsiveHeight(1.5),
+    fontSize: responsiveFontSize(1.6),
+    color: "#6B7280",
+    fontFamily: 'Poppins_400Regular',
+    marginBottom: 12,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: "#F3F4F6",
+    marginVertical: 12,
   },
   cardDetails: {
-    gap: responsiveHeight(0.8),
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
   detailRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    // alignItems: 'center',
   },
   detailLabel: {
-    fontSize: responsiveFontSize(1.5),
-    color: "#666",
+    fontSize: responsiveFontSize(1.4),
+    color: "#9CA3AF",
+    fontFamily: 'Poppins_400Regular',
+    marginBottom: 2,
   },
   detailValue: {
-    fontSize: responsiveFontSize(1.5),
-    fontWeight: "600",
-    color: "#1a1a1a",
-  },
-  issuesWarning: {
-    color: "#EF4444",
-  },
-  issuesOk: {
-    color: "#10B981",
-  },
-  cardArrow: {
-    position: "absolute",
-    right: responsiveWidth(4),
-    top: "50%",
-    transform: [{ translateY: -12 }],
-  },
-  arrowIcon: {
-    fontSize: responsiveFontSize(2.4),
-    color: ORANGE,
+    fontSize: responsiveFontSize(1.6),
+    fontFamily: 'Poppins_600SemiBold',
+    color: "#374151",
   },
   fab: {
     position: "absolute",
-    bottom: responsiveHeight(3),
-    right: responsiveWidth(6),
-    left: responsiveWidth(6),
+    bottom: responsiveHeight(4),
+    right: responsiveWidth(5),
+    left: responsiveWidth(5),
     backgroundColor: ORANGE,
-    borderRadius: 12,
+    borderRadius: 16,
     paddingVertical: responsiveHeight(2),
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: responsiveWidth(2),
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    gap: 8,
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowRadius: 16,
     elevation: 8,
   },
   fabIcon: {
     fontSize: responsiveFontSize(3),
     color: "#fff",
-    fontWeight: "700",
+    fontWeight: "bold",
+    marginTop: -2,
   },
   fabText: {
-    fontSize: responsiveFontSize(1.9),
-    fontWeight: "700",
+    fontSize: responsiveFontSize(2),
+    fontFamily: 'Poppins_700Bold',
     color: "#fff",
   },
 })

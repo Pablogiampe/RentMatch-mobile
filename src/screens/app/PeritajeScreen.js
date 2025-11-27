@@ -301,7 +301,7 @@ const PeritajeScreen = () => {
     if (!contactName.trim()) return Alert.alert("Falta nombre", "Completá tu nombre.")
     if (!contactEmail.trim()) return Alert.alert("Falta email", "Completá tu email.")
     if (!contactPhone.trim()) return Alert.alert("Falta teléfono", "Completá tu teléfono.")
-    if (!agree) return Alert.alert("Aceptar términos", "Aceptá los términos y condiciones para enviar.")
+    if (agree) return Alert.alert("Aceptar términos", "Aceptá los términos y condiciones para enviar.")
 
     if (!contractId) {
       return Alert.alert("Error", "No se encontró el contrato asociado.")
@@ -392,228 +392,228 @@ const PeritajeScreen = () => {
   }, [user])
 
   return (
-    <KeyboardAvoidingView>
-      <IncidenciasSvg />
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <View style={styles.topBar}>
-          <TouchableOpacity style={styles.back} onPress={() => navigation.goBack?.()}>
-            <IconComponent name="back-arrow" />
-          </TouchableOpacity>
-          <Text style={styles.topTitle}>Solicitar Peritaje</Text>
-          <View style={styles.topSpacer} />
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={{ flex: 1, backgroundColor: "#fff" }}>
+        {/* Fondo posicionado absolutamente para no interferir con el scroll */}
+        <View style={styles.backgroundSvg}>
+          <IncidenciasSvg />
         </View>
 
-        <View style={styles.card}>
-          <Text style={styles.propertyTitle}>{propertyTitle}</Text>
-
-          <Text style={styles.label}>Razón</Text>
-          {/* input con estilo de contraseña */}
-          <View style={styles.inputPasswordContainer}>
-            <TextInput
-              value={reason}
-              onChangeText={setReason}
-              style={styles.inputPassword}
-              placeholder="Ingresá la razón"
-              placeholderTextColor="#9BA3C7"
-              returnKeyType="next"
-            />
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.topBar}>
+            <TouchableOpacity style={styles.back} onPress={() => navigation.goBack?.()}>
+              <IconComponent name="back-arrow" />
+            </TouchableOpacity>
+            <Text style={styles.topTitle}>Solicitar Peritaje</Text>
+            <View style={styles.topSpacer} />
           </View>
 
-          <Text style={styles.label}>Descripción</Text>
-          {/* multiline con mismo contenedor */}
-          <View style={[styles.inputPasswordContainer, styles.inputMultilineContainer]}>
-            <TextInput
-              value={description}
-              onChangeText={setDescription}
-              style={[styles.inputPassword, styles.inputMultiline]}
-              placeholder="Contanos el detalle"
-              placeholderTextColor="#9BA3C7"
-              multiline
-              returnKeyType="default"
-            />
-          </View>
+          <View style={styles.card}>
+            <Text style={styles.propertyTitle}>{propertyTitle}</Text>
 
-          <Text style={styles.label}>Fecha y Horario</Text>
-          <TouchableOpacity
-            style={styles.inputPasswordContainer}
-            onPress={() => setShowCalendar(true)}
-            activeOpacity={0.9}
-          >
-            <Text style={date && time ? styles.inputText : styles.inputPlaceholder}>
-              {date && time ? `${date} - ${time}` : "Seleccionar fecha y horario"}
-            </Text>
-          </TouchableOpacity>
-
-          <Text style={styles.sectionTitle}>Información de contacto</Text>
-
-          <View style={styles.inputPasswordContainer}>
-            <TextInput
-              value={contactName}
-              onChangeText={setContactName}
-              style={styles.inputPassword}
-              placeholder="Nombre y apellido"
-              placeholderTextColor="#9BA3C7"
-              returnKeyType="next"
-            />
-          </View>
-
-          <View style={styles.inputPasswordContainer}>
-            <TextInput
-              value={contactEmail}
-              onChangeText={setContactEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.inputPassword}
-              placeholder="Correo electrónico"
-              placeholderTextColor="#9BA3C7"
-              returnKeyType="next"
-            />
-          </View>
-
-          <View style={styles.inputPasswordContainer}>
-            <TextInput
-              value={contactPhone}
-              onChangeText={setContactPhone}
-              keyboardType="phone-pad"
-              style={styles.inputPassword}
-              placeholder="Teléfono"
-              placeholderTextColor="#9BA3C7"
-              returnKeyType="done"
-            />
-          </View>
-
-          <View style={styles.checkboxContainer}>
-            <Animated.View
-              style={{
-                transform: [{ scale: checkboxScale }],
-                opacity: checkboxOpacity,
-              }}
-            >
-              <Checkbox
-                style={styles.checkbox}
-                value={agree}
-                onValueChange={handleAgreeToggle}
-                color={agree ? '#FF5A1F' : '#B4BEE2'}
+            <Text style={styles.label}>Razón</Text>
+            {/* input con estilo de contraseña */}
+            <View style={styles.inputPasswordContainer}>
+              <TextInput
+                value={reason}
+                onChangeText={setReason}
+                style={styles.inputPassword}
+                placeholder="Ingresá la razón"
+                placeholderTextColor="#9BA3C7"
+                returnKeyType="next"
               />
-            </Animated.View>
+            </View>
+
+            <Text style={styles.label}>Descripción</Text>
+            {/* multiline con mismo contenedor */}
+            <View style={[styles.inputPasswordContainer, styles.inputMultilineContainer]}>
+              <TextInput
+                value={description}
+                onChangeText={setDescription}
+                style={[styles.inputPassword, styles.inputMultiline]}
+                placeholder="Contanos el detalle"
+                placeholderTextColor="#9BA3C7"
+                multiline
+                returnKeyType="default"
+              />
+            </View>
+
+            <Text style={styles.label}>Fecha y Horario</Text>
             <TouchableOpacity
-              onPress={handleAgreeToggle}
-              style={styles.checkboxTouchable}
+              style={styles.inputPasswordContainer}
+              onPress={() => setShowCalendar(true)}
+              activeOpacity={0.9}
             >
-              <Text style={styles.checkboxLabel}>Estoy de acuerdo con los términos y condiciones</Text>
+              <Text style={date && time ? styles.inputText : styles.inputPlaceholder}>
+                {date && time ? `${date} - ${time}` : "Seleccionar fecha y horario"}
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={styles.sectionTitle}>Información de contacto</Text>
+
+            <View style={styles.inputPasswordContainer}>
+              <TextInput
+                value={contactName}
+                onChangeText={setContactName}
+                style={styles.inputPassword}
+                placeholder="Nombre y apellido"
+                placeholderTextColor="#9BA3C7"
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={styles.inputPasswordContainer}>
+              <TextInput
+                value={contactEmail}
+                onChangeText={setContactEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                style={styles.inputPassword}
+                placeholder="Correo electrónico"
+                placeholderTextColor="#9BA3C7"
+                returnKeyType="next"
+              />
+            </View>
+
+            <View style={styles.inputPasswordContainer}>
+              <TextInput
+                value={contactPhone}
+                onChangeText={setContactPhone}
+                keyboardType="phone-pad"
+                style={styles.inputPassword}
+                placeholder="Teléfono"
+                placeholderTextColor="#9BA3C7"
+                returnKeyType="done"
+              />
+            </View>
+
+           
+
+            <TouchableOpacity
+              style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
+              onPress={validateAndSubmit}
+              disabled={submitting}
+            >
+              <Text style={styles.submitText}>{submitting ? "Enviando..." : "Enviar"}</Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
-            onPress={validateAndSubmit}
-            disabled={submitting}
+          {/* Modal Calendario con selector de horario integrado */}
+          <Modal
+            visible={showCalendar}
+            transparent
+            animationType="fade"
+            onRequestClose={handleCloseCalendar}
           >
-            <Text style={styles.submitText}>{submitting ? "Enviando..." : "Enviar"}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Modal Calendario con selector de horario integrado */}
-        <Modal
-          visible={showCalendar}
-          transparent
-          animationType="fade"
-          onRequestClose={handleCloseCalendar}
-        >
-          <TouchableOpacity
-            style={styles.modalOverlay}
-            activeOpacity={1}
-            onPress={handleCloseCalendar}
-          >
-            <View style={styles.calendarContainer}>
-              <View style={styles.calendarHeader}>
-                {selectedDateForTime && (
-                  <TouchableOpacity 
-                    onPress={handleBackInTimeSelection}
-                    style={styles.backButton}
-                  >
-                    <IconComponent name="back-arrow" />
-                  </TouchableOpacity>
-                )}
-                <Text style={styles.calendarTitle}>
-                  {selectedDateForTime ? "Seleccionar horario" : "Seleccionar fecha"}
-                </Text>
-                <TouchableOpacity onPress={handleCloseCalendar}>
-                  <Text style={styles.closeButton}>✕</Text>
-                </TouchableOpacity>
-              </View>
-
-              {!selectedDateForTime ? (
-                <>
-                  <Calendar
-                    onDayPress={onDateSelect}
-                    markedDates={markedDates}
-                    minDate={new Date().toISOString().split('T')[0]}
-                    maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                    theme={{
-                      backgroundColor: '#ffffff',
-                      calendarBackground: '#ffffff',
-                      textSectionTitleColor: '#b6c1cd',
-                      selectedDayBackgroundColor: '#FF5A1F',
-                      selectedDayTextColor: '#ffffff',
-                      todayTextColor: '#FF5A1F',
-                      dayTextColor: '#2d4150',
-                      textDisabledColor: '#d9e1e8',
-                      dotColor: '#FF5A1F',
-                      selectedDotColor: '#ffffff',
-                      arrowColor: '#FF5A1F',
-                      monthTextColor: '#2d4150',
-                      textMonthFontWeight: '700',
-                      textDayFontSize: responsiveFontSize(1.8),
-                      textMonthFontSize: responsiveFontSize(2),
-                      textDayHeaderFontSize: responsiveFontSize(1.6),
-                    }}
-                    markingType="custom"
-                    hideExtraDays
-                  />
-                  <View style={styles.calendarFooter}>
-                    <Text style={styles.calendarHint}>
-                      📅 Disponibles de lunes a sábado
-                    </Text>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text style={styles.timePickerSubtitle}>
-                    Deslizá para elegir tu horario (10:00 - 16:00)
+            <TouchableOpacity
+              style={styles.modalOverlay}
+              activeOpacity={1}
+              onPress={handleCloseCalendar}
+            >
+              <View style={styles.calendarContainer}>
+                <View style={styles.calendarHeader}>
+                  {selectedDateForTime && (
+                    <TouchableOpacity 
+                      onPress={handleBackInTimeSelection}
+                      style={styles.backButton}
+                    >
+                      <IconComponent name="back-arrow" />
+                    </TouchableOpacity>
+                  )}
+                  <Text style={styles.calendarTitle}>
+                    {selectedDateForTime ? "Seleccionar horario" : "Seleccionar fecha"}
                   </Text>
-                  <TimePickerWheel 
-                    times={getAvailableTimes(selectedDateForTime)}
-                    onSelect={onTimeSelect}
-                  />
-                  <TouchableOpacity
-                    style={styles.confirmTimeButton}
-                    onPress={() => {
-                      const times = getAvailableTimes(selectedDateForTime)
-                      onTimeSelect(times[currentScrollIndex])
-                    }}
-                  >
-                    <Text style={styles.confirmTimeText}>✓ Confirmar horario</Text>
+                  <TouchableOpacity onPress={handleCloseCalendar}>
+                    <Text style={styles.closeButton}>✕</Text>
                   </TouchableOpacity>
-                </>
-              )}
-            </View>
-          </TouchableOpacity>
-        </Modal>
-      </ScrollView>
+                </View>
+
+                {!selectedDateForTime ? (
+                  <>
+                    <Calendar
+                      onDayPress={onDateSelect}
+                      markedDates={markedDates}
+                      minDate={new Date().toISOString().split('T')[0]}
+                      maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                      theme={{
+                        backgroundColor: '#ffffff',
+                        calendarBackground: '#ffffff',
+                        textSectionTitleColor: '#b6c1cd',
+                        selectedDayBackgroundColor: '#FF5A1F',
+                        selectedDayTextColor: '#ffffff',
+                        todayTextColor: '#FF5A1F',
+                        dayTextColor: '#2d4150',
+                        textDisabledColor: '#d9e1e8',
+                        dotColor: '#FF5A1F',
+                        selectedDotColor: '#ffffff',
+                        arrowColor: '#FF5A1F',
+                        monthTextColor: '#2d4150',
+                        textMonthFontWeight: '700',
+                        textDayFontSize: responsiveFontSize(1.8),
+                        textMonthFontSize: responsiveFontSize(2),
+                        textDayHeaderFontSize: responsiveFontSize(1.6),
+                      }}
+                      markingType="custom"
+                      hideExtraDays
+                    />
+                    <View style={styles.calendarFooter}>
+                      <Text style={styles.calendarHint}>
+                        📅 Disponibles de lunes a sábado
+                      </Text>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <Text style={styles.timePickerSubtitle}>
+                      Deslizá para elegir tu horario (10:00 - 16:00)
+                    </Text>
+                    <TimePickerWheel 
+                      times={getAvailableTimes(selectedDateForTime)}
+                      onSelect={onTimeSelect}
+                    />
+                    <TouchableOpacity
+                      style={styles.confirmTimeButton}
+                      onPress={() => {
+                        const times = getAvailableTimes(selectedDateForTime)
+                        onTimeSelect(times[currentScrollIndex])
+                      }}
+                    >
+                      <Text style={styles.confirmTimeText}>✓ Confirmar horario</Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+              </View>
+            </TouchableOpacity>
+          </Modal>
+        </ScrollView>
+      </View>
     </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "none" },
-  container: {
+  page: { flex: 1, backgroundColor: "#fff" }, // Cambiado "none" por color válido
+  backgroundSvg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: -1,
+  },
+  scrollContent: {
     padding: responsiveWidth(4),
     alignItems: "center",
-    backgroundColor: "none",
-    height: "100%",
-
+    flexGrow: 1, // Permite que crezca si es necesario
+    paddingBottom: responsiveHeight(10), // Espacio extra al final para que no se corte el botón
   },
+  // container: { ... } ELIMINADO o reemplazado por scrollContent
   topBar: {
     width: "100%",
     flexDirection: "row",
@@ -639,8 +639,8 @@ const styles = StyleSheet.create({
   topSpacer: { width: 36 },
   card: {
     width: "100%",
-    height: "100%",
-    backgroundColor: "none",
+    // height: "100%", // ELIMINADO: Esto impedía el scroll
+    backgroundColor: "transparent", // Cambiado "none" por transparent
     borderRadius: 10,
     padding: responsiveWidth(2),
   },

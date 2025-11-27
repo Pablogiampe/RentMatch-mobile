@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react"
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator, RefreshControl, FlatList, Alert } from "react-native"
+import { useState, useRef, useEffect, useMemo } from "react"
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator, RefreshControl, FlatList, Alert, PanResponder } from "react-native"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useAuth } from "../../contexts/AuthContext"
 import { useRental } from "../../contexts/RentalContext"
@@ -15,7 +15,7 @@ const SNAP_INTERVAL = CARD_WIDTH + SPACING
 const SIDE_SPACER = (responsiveWidth(100) - CARD_WIDTH) / 2
   
 const HomeScreen= () => {
-  const { user, signOut } = useAuth()
+  const { user, signOut, token, session } = useAuth()
   const rentalContext = useRental()
   const navigation = useNavigation()
   
@@ -23,6 +23,7 @@ const HomeScreen= () => {
   const [selectedRental, setSelectedRental] = useState(null)
   // Nuevo estado para controlar el índice activo visualmente
   const [activeIndex, setActiveIndex] = useState(0)
+  const [nextPeritaje, setNextPeritaje] = useState(null) // Estado para el próximo peritaje
   const flatListRef = useRef(null)
   const scrollX = useRef(new Animated.Value(0)).current // Referencia para animación fluida
 
@@ -90,6 +91,49 @@ const HomeScreen= () => {
   const arrowRotation = useRef(new Animated.Value(0)).current
   const scrollY = useRef(0)
 
+  // MOVIDO: Definimos toggleExpand ANTES del PanResponder para evitar errores de referencia
+  const toggleExpand = () => {
+    const newExpandedState = !isExpanded
+    setIsExpanded(newExpandedState)
+
+    Animated.parallel([
+      Animated.spring(animatedHeight, {
+        // Aumentamos a 70% para que entren las 4 filas cómodamente
+        toValue: newExpandedState ? responsiveHeight(62) : responsiveHeight(9),
+        useNativeDriver: false,
+        tension: 50,
+        friction: 7,
+      }),
+      Animated.timing(arrowRotation, {
+        toValue: newExpandedState ? 1 : 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start()
+  }
+
+  // Configuración del PanResponder para detectar gestos de deslizamiento
+  // USAMOS useMemo en lugar de useRef para que se actualice cuando cambia isExpanded
+  const panResponder = useMemo(() => 
+    PanResponder.create({
+      // Solo activar si el movimiento vertical es mayor que el horizontal (intención de scroll vertical)
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx)
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        // Si arrastra hacia abajo (dy positivo) y no está expandido -> Expandir
+        if (gestureState.dy > 50 && !isExpanded) {
+          toggleExpand()
+        }
+        // Si arrastra hacia arriba (dy negativo) y está expandido -> Colapsar
+        else if (gestureState.dy < -50 && isExpanded) {
+          toggleExpand()
+        }
+      },
+    }),
+    [isExpanded] // Dependencia clave para que el closure no quede obsoleto
+  )
+
   const handleSignOut = async () => {
     await signOut()
   }
@@ -115,6 +159,54 @@ const HomeScreen= () => {
       loadRentals()
     }
   }, [user?.id, loadRentals])
+
+  // Efecto para cargar el próximo peritaje
+  useEffect(() => {
+    const fetchNextPeritaje = async () => {
+      if (!user?.id) return
+      const activeToken = token || session
+      if (!activeToken) return
+
+      try {
+        const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-Expertise/GetExpertiseByTenant", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${activeToken}`
+          },
+          body: JSON.stringify({
+            tenant_id: user.id
+          })
+        })
+
+        const data = await response.json()
+        
+        if (response.ok && data.data && Array.isArray(data.data)) {
+          const now = new Date()
+          now.setHours(0, 0, 0, 0) // Ignorar hora para comparar fechas
+
+          // Filtrar futuros y ordenar por fecha ascendente
+          const upcoming = data.data
+            .map(item => ({
+              ...item,
+              dateObj: new Date(item.date || item.created_at)
+            }))
+            .filter(item => item.dateObj >= now)
+            .sort((a, b) => a.dateObj - b.dateObj)
+
+          if (upcoming.length > 0) {
+            setNextPeritaje(upcoming[0])
+          } else {
+            setNextPeritaje(null)
+          }
+        }
+      } catch (error) {
+        console.log("Error fetching next peritaje:", error)
+      }
+    }
+
+    fetchNextPeritaje()
+  }, [user, token, session])
 
   // Efecto para seleccionar el primer alquiler por defecto cuando cargan
   useEffect(() => {
@@ -157,26 +249,6 @@ const HomeScreen= () => {
   const handleScroll = (event) => {
     const currentScrollY = event.nativeEvent.contentOffset.y
     scrollY.current = currentScrollY
-  }
-
-  const toggleExpand = () => {
-    const newExpandedState = !isExpanded
-    setIsExpanded(newExpandedState)
-
-    Animated.parallel([
-      Animated.spring(animatedHeight, {
-        // Aumentamos a 70% para que entren las 4 filas cómodamente
-        toValue: newExpandedState ? responsiveHeight(70) : responsiveHeight(9),
-        useNativeDriver: false,
-        tension: 50,
-        friction: 7,
-      }),
-      Animated.timing(arrowRotation, {
-        toValue: newExpandedState ? 1 : 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start()
   }
 
   const arrowRotate = arrowRotation.interpolate({
@@ -225,6 +297,7 @@ const HomeScreen= () => {
     
     // Solo actualizar si cambió
     if (rental && (!selectedRental || (rental.contract_id !== selectedRental.contract_id && rental.id !== selectedRental.id))) {
+      console.log("🔄 Cambio de alquiler seleccionado:", rental.address || "Sin dirección") // <--- LOG PARA VERIFICAR
       setSelectedRental(rental)
     }
   }
@@ -233,6 +306,7 @@ const HomeScreen= () => {
     <View style={styles.container}>
       <Home style={{ position: "absolute", top: 0, left: 0 }} />
       <Animated.View
+        {...panResponder.panHandlers} // 👈 Agregamos los detectores de gestos aquí
         style={[
           styles.stickyHeader,
           {
@@ -424,6 +498,25 @@ const HomeScreen= () => {
                           )}
                         </View>
                       </View>
+
+                      {/* Nuevo botón para ver detalle */}
+                      <TouchableOpacity 
+                        style={[
+                          styles.viewDetailButton,
+                          isSelected && styles.viewDetailButtonSelected
+                        ]}
+                        onPress={() => navigation.navigate('PropertyDetail', { rentalData: item })}
+                      >
+                        <Text style={[
+                          styles.viewDetailText,
+                          isSelected && styles.viewDetailTextSelected
+                        ]}>Ver detalle</Text>
+                        <IconComponent name="arrow-right" style={[
+                          styles.viewDetailIcon,
+                          isSelected && styles.viewDetailTextSelected
+                        ]} />
+                      </TouchableOpacity>
+
                     </TouchableOpacity>
                   )
                 }}
@@ -474,11 +567,18 @@ const HomeScreen= () => {
           {/* Welcome banner */}
           <View style={styles.welcomeCard}>
             <View style={styles.welcomeBadge}>
-              <Text style={styles.welcomeBadgeText}>Nuevo</Text>
+              <Text style={styles.welcomeBadgeText}>
+                {nextPeritaje ? "Próximo Peritaje" : "Nuevo"}
+              </Text>
             </View>
-            <Text style={styles.welcomeTitle}>Todo en un solo lugar</Text>
+            <Text style={styles.welcomeTitle}>
+              {nextPeritaje ? "Agendado en tu calendario" : "Todo en un solo lugar"}
+            </Text>
             <Text style={styles.welcomeSubtitle}>
-              Reportá incidencias, gestioná estados y mirá tus alquileres activos.
+              {nextPeritaje 
+                ? `Tu próximo peritaje es el ${new Date(nextPeritaje.date || nextPeritaje.created_at).toLocaleDateString("es-AR")}`
+                : "Reportá incidencias, gestioná estados y mirá tus alquileres activos."
+              }
             </Text>
           </View>
 
@@ -587,7 +687,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     width: "100%",
-    height: responsiveHeight(70),
+    height: responsiveHeight(65),
     backgroundColor: "#FF5A1F",
   },
   headerTopRow: {
@@ -875,6 +975,32 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: responsiveFontSize(1.2),
     fontFamily: 'Poppins_600SemiBold',
+  },
+  // Estilos nuevos para el botón de detalle
+  viewDetailButton: {
+    marginTop: responsiveHeight(2),
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  viewDetailButtonSelected: {
+    backgroundColor: '#FF5A1F', // Naranja cuando está seleccionado
+  },
+  viewDetailText: {
+    fontSize: responsiveFontSize(1.4),
+    fontFamily: 'Poppins_600SemiBold',
+    color: '#4B5563',
+    marginRight: 4,
+  },
+  viewDetailTextSelected: {
+    color: '#fff', // Texto blanco cuando está seleccionado
+  },
+  viewDetailIcon: {
+    fontSize: responsiveFontSize(1.4),
+    color: '#4B5563',
   },
   tapToSelectText: {
     color: "#9CA3AF",

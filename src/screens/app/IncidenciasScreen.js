@@ -1,32 +1,59 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput } from "react-native"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
+import * as ImagePicker from "expo-image-picker"
+import IconComponent from "../../../RentMatch_mobile/assets/icons"
+import IncidenciasSvg from "../../../RentMatch_mobile/assets/IncidenciasSvg"
+import { useAuth } from "../../contexts/AuthContext"
 
 const ORANGE = "#FF5A1F"
 
 const IncidenciasScreen = ({ route, navigation }) => {
-  const propertyTitle = route?.params?.title || "Departamento en Belgrano"
+  const { token, session } = useAuth()
+  const activeToken = token || session
+  
+  const contractId = route?.params?.contract_id
+  const propertyTitle = route?.params?.title || "Propiedad"
 
   // Form state
   const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
-  const [room, setRoom] = useState("")
   const [urgency, setUrgency] = useState(null) // "low" | "medium" | "high" | null
-  const [imageAdded, setImageAdded] = useState(false)
+  const [images, setImages] = useState([])
+  const [submitting, setSubmitting] = useState(false)
 
   const isDirty =
     !!title.trim() ||
     !!description.trim() ||
-    !!room.trim() ||
     urgency !== null ||
-    imageAdded
+    images.length > 0
 
-  const handleUploadImage = () => {
-    setImageAdded(true)
-    Alert.alert("Subir foto", "TODO: Integrar selector de imágenes (expo-image-picker).")
+  const requestPermission = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (status !== "granted") {
+      Alert.alert("Permiso requerido", "Necesitamos acceso a tus fotos para subir imágenes.")
+      return false
+    }
+    return true
   }
+
+  const handlePickImage = async () => {
+    const ok = await requestPermission()
+    if (!ok) return
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.8,
+      allowsEditing: false,
+    })
+    if (!result.canceled) {
+      const uri = result.assets[0]?.uri
+      if (uri) setImages((prev) => [...prev, { uri, id: Date.now().toString() }])
+    }
+  }
+
+  const removeImage = (id) => setImages((prev) => prev.filter((i) => i.id !== id))
 
   const handleSaveDraft = () => {
     Alert.alert("Borrador guardado", "Se guardó como borrador.")
@@ -49,6 +76,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
   }
 
   const handleBack = () => confirmLeaveIfDirty(() => navigation.goBack())
+  
   useEffect(() => {
     const unsub = navigation.addListener("beforeRemove", (e) => {
       if (!isDirty) return
@@ -58,267 +86,409 @@ const IncidenciasScreen = ({ route, navigation }) => {
     return unsub
   }, [navigation, isDirty])
 
-  const handleSubmit = () => {
-    Alert.alert("Enviar Reporte", "TODO: enviar reporte a la API.")
+  const handleSubmit = async () => {
+    if (!contractId) {
+      return Alert.alert("Error", "No se encontró el contrato asociado.")
+    }
+    if (!title.trim()) return Alert.alert("Falta título", "Por favor ingresá un título (Razón).")
+    if (!description.trim()) return Alert.alert("Falta descripción", "Por favor ingresá una descripción.")
+    if (!urgency) return Alert.alert("Falta urgencia", "Por favor seleccioná un nivel de urgencia.")
+
+    setSubmitting(true)
+
+    // Mapeo de urgencia: Ahora incluye Baja
+    const urgencyMap = {
+      low: "Bajo",
+      medium: "Media", 
+      high: "Alta"
+    }
+
+    try {
+      const formData = new FormData()
+      formData.append("contract_id", String(contractId))
+      formData.append("razon", title)
+      // Ya no concatenamos habitación
+      formData.append("descripcion", description)
+      
+      // Agregamos urgency mapeada
+      if (urgencyMap[urgency]) {
+        formData.append("urgency", urgencyMap[urgency])
+      }
+
+      // Append images
+      images.forEach((img) => {
+        const filename = img.uri.split('/').pop()
+        const match = /\.(\w+)$/.exec(filename)
+        const type = match ? `image/${match[1]}` : `image/jpeg`
+        
+        formData.append('images', {
+          uri: img.uri,
+          name: filename,
+          type,
+        })
+      })
+      
+      console.log("🚀 Enviando incidencia...", {
+        contract_id: contractId,
+        razon: title,
+        urgency: urgencyMap[urgency] || "Default",
+        imagesCount: images.length
+      })
+
+      const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-reporter/incidents", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${activeToken}`
+          // Content-Type se establece automáticamente con FormData
+        },
+        body: formData
+      })
+
+      const data = await response.json()
+      console.log("📩 Respuesta servidor:", response.status, data)
+
+      if (!response.ok) {
+        throw new Error(data.message || "No se pudo enviar el reporte.")
+      }
+
+      Alert.alert("Reporte enviado", "La incidencia se ha registrado correctamente.", [
+        { 
+          text: "OK", 
+          onPress: () => {
+            // Limpiamos el formulario para que isDirty sea false y no salte la alerta
+            setTitle("")
+            setDescription("")
+            setUrgency(null)
+            setImages([])
+            
+            // Damos un pequeño tiempo para que el estado se actualice antes de volver
+            setTimeout(() => navigation.goBack(), 100)
+          } 
+        }
+      ])
+
+    } catch (error) {
+      console.error("❌ Error submit:", error)
+      Alert.alert("Error", error.message || "Ocurrió un error al enviar.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  const previousIncidents = [
-    { id: "#12345", title: "Incidente #12345", subtitle: "Ventana rota en la cocina" },
-    { id: "#67890", title: "Incidente #67890", subtitle: "Vaso roto" },
-  ]
-
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      {/* Back */}
-      <View style={styles.headerRow}>
-        <TouchableOpacity style={styles.backBtn} onPress={handleBack}>
-          <Text style={styles.backIcon}>←</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Headers */}
-      <Text style={styles.smallHeader}>Nuevo incidente</Text>
-      <Text style={styles.screenTitle}>{propertyTitle}</Text>
-
-      {/* Titulo */}
-      <Text style={styles.label}>Titulo</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Escribí un título"
-        placeholderTextColor="#9AA2B1"
-        value={title}
-        onChangeText={setTitle}
-      />
-
-      {/* Descripcion */}
-      <TextInput
-        style={[styles.input, styles.textArea]}
-        placeholder="Agregá una descripción"
-        placeholderTextColor="#9AA2B1"
-        value={description}
-        onChangeText={setDescription}
-        multiline
-      />
-
-      {/* Habitación */}
-      <Text style={styles.label}>Habitacion</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Ej: Cocina, Living, Dormitorio..."
-        placeholderTextColor="#9AA2B1"
-        value={room}
-        onChangeText={setRoom}
-      />
-
-      {/* Imagenes */}
-      <Text style={styles.sectionHeader}>Imagenes</Text>
-      <TouchableOpacity style={styles.uploadBox} onPress={handleUploadImage}>
-        <Text style={styles.uploadTitle}>Subir foto</Text>
-        <Text style={styles.helperText}>
-          Agregue fotos para que podamos entender{"\n"}mejor la situación
-        </Text>
-        <View style={styles.uploadIconBox}>
-          <Text style={styles.uploadIcon}>⬆️</Text>
+    <KeyboardAvoidingView 
+      style={{ flex: 1 }} 
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <View style={{ flex: 1, backgroundColor: "#fff" }}>
+        {/* Fondo SVG */}
+        <View style={styles.backgroundSvg}>
+          <IncidenciasSvg />
         </View>
-      </TouchableOpacity>
 
-      {/* Urgencia */}
-      <Text style={styles.sectionHeader}>Urgencia</Text>
-      <View style={styles.segment}>
-        {[
-          { key: "low", label: "Baja" },
-          { key: "medium", label: "Media" },
-          { key: "high", label: "Alta" },
-        ].map((opt) => {
-          const active = urgency === opt.key
-          return (
-            <TouchableOpacity
-              key={opt.key}
-              style={[styles.segmentBtn, active && styles.segmentActive]}
-              onPress={() => setUrgency(opt.key)}
-            >
-              <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
-                {opt.label}
-              </Text>
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <View style={styles.topBar}>
+            <TouchableOpacity style={styles.back} onPress={handleBack}>
+              <IconComponent name="back-arrow" />
             </TouchableOpacity>
-          )
-        })}
-      </View>
-
-      {/* Incidentes Previos */}
-      <Text style={styles.prevHeader}>Incidentes Previos</Text>
-      {previousIncidents.map((item) => (
-        <View key={item.id} style={styles.prevItem}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.prevTitle}>{item.title}</Text>
-            <Text style={styles.prevSubtitle}>{item.subtitle}</Text>
+            <Text style={styles.topTitle}>Reportar Incidencia</Text>
+            <View style={styles.topSpacer} />
           </View>
-          <View style={styles.dot} />
-        </View>
-      ))}
 
-      {/* Submit */}
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Enviar Reporte</Text>
-      </TouchableOpacity>
-    </ScrollView>
+          <View style={styles.card}>
+            <Text style={styles.propertyTitle}>{propertyTitle}</Text>
+
+            {/* Titulo */}
+            <Text style={styles.label}>Título</Text>
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={styles.input}
+                placeholder="Ej: Cañería rota"
+                placeholderTextColor="#9BA3C7"
+                value={title}
+                onChangeText={setTitle}
+              />
+            </View>
+
+            {/* Descripcion */}
+            <Text style={styles.label}>Descripción</Text>
+            <View style={[styles.inputContainer, styles.textAreaContainer]}>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Describí el problema con detalle..."
+                placeholderTextColor="#9BA3C7"
+                value={description}
+                onChangeText={setDescription}
+                multiline
+              />
+            </View>
+
+            {/* Urgencia */}
+            <Text style={styles.label}>Nivel de Urgencia</Text>
+            <View style={styles.segment}>
+              { [
+                { key: "low", label: "Bajo", color: "#4CAF50" },
+                { key: "medium", label: "Media", color: "#FFC107" },
+                { key: "high", label: "Alta", color: "#F44336" },
+              ].map((opt) => {
+                const active = urgency === opt.key
+                return (
+                  <TouchableOpacity
+                    key={opt.key}
+                    style={[
+                      styles.segmentBtn, 
+                      active && { backgroundColor: opt.color, borderColor: opt.color }
+                    ]}
+                    onPress={() => setUrgency(opt.key)}
+                  >
+                    <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                      {opt.label}
+                    </Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </View>
+
+            {/* Imagenes */}
+            <Text style={styles.label}>Evidencia fotográfica</Text>
+            <TouchableOpacity style={styles.uploadBox} onPress={handlePickImage}>
+              <View style={styles.uploadIconBox}>
+                <IconComponent name="upload" style={{ color: ORANGE, fontSize: 24 }} />
+              </View>
+              <View style={{flex: 1}}>
+                <Text style={styles.uploadTitle}>Subir fotos</Text>
+                <Text style={styles.helperText}>
+                  Agregá fotos para documentar el estado
+                </Text>
+              </View>
+              <Text style={{color: ORANGE, fontSize: 24}}>+</Text>
+            </TouchableOpacity>
+
+            {/* Galeria */}
+            {images.length > 0 && (
+              <View style={styles.gallery}>
+                {images.map((img) => (
+                  <View key={img.id} style={styles.thumbWrap}>
+                    <Image source={{ uri: img.uri }} style={styles.thumb} />
+                    <TouchableOpacity style={styles.removePill} onPress={() => removeImage(img.id)}>
+                      <Text style={styles.removeText}>✕</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            {/* Submit */}
+            <TouchableOpacity 
+              style={[styles.submitBtn, submitting && { opacity: 0.7 }]} 
+              onPress={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.submitText}>Enviar Reporte</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </View>
+    </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
-  container: {
-    padding: responsiveWidth(6),
-    backgroundColor: "#fff",
+  backgroundSvg: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: -1,
   },
-  headerRow: {
+  scrollContent: {
+    padding: responsiveWidth(4),
+    flexGrow: 1,
+    paddingBottom: responsiveHeight(10),
+  },
+  topBar: {
+    width: "100%",
     flexDirection: "row",
     alignItems: "center",
     marginBottom: responsiveHeight(1),
+    marginTop: responsiveHeight(4),
   },
-  backBtn: {
-    paddingVertical: responsiveHeight(0.5),
-    paddingHorizontal: responsiveWidth(1),
+  back: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  backIcon: {
-    fontSize: responsiveFontSize(3),
-    color: "#1a1a1a",
-  },
-  smallHeader: {
+  topTitle: {
+    flex: 1,
     textAlign: "center",
-    color: "#60666F",
+    fontSize: responsiveFontSize(2.2),
     fontWeight: "600",
-    fontSize: responsiveFontSize(1.7),
-    marginTop: responsiveHeight(0.5),
+    color: "#0B0B0C",
+    fontFamily: "Poppins_600SemiBold",
   },
-  screenTitle: {
+  topSpacer: { width: 36 },
+  
+  card: {
+    width: "100%",
+    backgroundColor: "transparent",
+    borderRadius: 10,
+    padding: responsiveWidth(2),
+  },
+  propertyTitle: {
+    textAlign: "center",
     fontSize: responsiveFontSize(2.4),
     fontWeight: "700",
-    color: "#1a1a1a",
-    textAlign: "center",
-    marginBottom: responsiveHeight(2),
+    marginBottom: responsiveHeight(3),
+    color: "#111213",
+    fontFamily: "Poppins_700Bold",
   },
   label: {
     fontSize: responsiveFontSize(1.8),
-    fontWeight: "600",
-    color: "#1a1a1a",
+    fontFamily: 'Poppins_600SemiBold',
+    color: "#222",
+    marginBottom: responsiveHeight(0.8),
+    marginTop: responsiveHeight(1),
+  },
+  
+  // Estilos de Inputs unificados con Peritaje
+  inputContainer: {
+    height: 48,
+    flexDirection: "row",
+    borderWidth: 1,
+    borderColor: "rgba(105, 138, 238, 0.5)",
+    borderRadius: 8,
+    backgroundColor: "#F1F4FF",
+    alignItems: "center",
+    shadowColor: "#8e8a8aff",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
     marginBottom: responsiveHeight(1),
   },
   input: {
-    backgroundColor: "#F1F4FF",
-    borderRadius: 10,
-    paddingHorizontal: responsiveWidth(3),
-    paddingVertical: responsiveHeight(1.6),
-    marginBottom: responsiveHeight(2),
-    color: "#1a1a1a",
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 12,
+    color: "#5c5858ff",
+    fontWeight: "600",
     fontSize: responsiveFontSize(1.8),
+    fontFamily: "Poppins_400Regular",
+  },
+  textAreaContainer: {
+    height: undefined,
+    minHeight: responsiveHeight(12),
+    alignItems: "flex-start",
+    paddingVertical: responsiveHeight(1),
   },
   textArea: {
-    height: responsiveHeight(16),
     textAlignVertical: "top",
+    height: "100%",
   },
-  sectionHeader: {
-    fontSize: responsiveFontSize(1.9),
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: responsiveHeight(1),
-  },
+
+  // Upload Box estilo Card
   uploadBox: {
-    borderWidth: 1,
-    borderColor: "#E4E6EB",
-    borderStyle: "dashed",
-    borderRadius: 12,
-    paddingVertical: responsiveHeight(4),
+    flexDirection: "row",
     alignItems: "center",
-    marginBottom: responsiveHeight(3),
-  },
-  uploadTitle: {
-    fontSize: responsiveFontSize(1.9),
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: responsiveHeight(0.8),
-  },
-  helperText: {
-    fontSize: responsiveFontSize(1.5),
-    color: "#666",
-    textAlign: "center",
-    marginBottom: responsiveHeight(1.6),
-    lineHeight: responsiveHeight(2.2),
+    backgroundColor: "#FFF4EC",
+    borderWidth: 1,
+    borderColor: "#FFD6BF",
+    borderRadius: 12,
+    padding: responsiveWidth(4),
+    marginBottom: responsiveHeight(2),
   },
   uploadIconBox: {
-    backgroundColor: "#FFF5F0",
-    paddingVertical: responsiveHeight(0.8),
-    paddingHorizontal: responsiveWidth(3),
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20, // Redondo
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: responsiveWidth(3),
   },
-  uploadIcon: {
-    fontSize: responsiveFontSize(2.4),
-    color: ORANGE,
+  uploadTitle: {
+    fontSize: responsiveFontSize(1.8),
+    fontWeight: "700",
+    color: ORANGE, // Color naranja como en la imagen
+    fontFamily: "Poppins_600SemiBold",
   },
+  helperText: {
+    fontSize: responsiveFontSize(1.4),
+    color: "#666",
+    fontFamily: "Poppins_400Regular",
+  },
+
+  gallery: { flexDirection: "row", flexWrap: "wrap", gap: responsiveWidth(2), marginBottom: responsiveHeight(2) },
+  thumbWrap: { position: "relative" },
+  thumb: { width: responsiveWidth(26), height: responsiveWidth(26), borderRadius: 8 },
+  removePill: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: ORANGE,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: "#fff"
+  },
+  removeText: { color: "#fff", fontWeight: "700", fontSize: 12 },
+
+  // Segment Control
   segment: {
     flexDirection: "row",
     gap: responsiveWidth(3),
-    marginBottom: responsiveHeight(3),
+    marginBottom: responsiveHeight(2),
   },
   segmentBtn: {
-    flex: 0,
+    flex: 1,
     paddingVertical: responsiveHeight(1.2),
-    paddingHorizontal: responsiveWidth(4),
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: "#E4E6EB",
     backgroundColor: "#fff",
-  },
-  segmentActive: {
-    backgroundColor: ORANGE,
-    borderColor: ORANGE,
+    alignItems: "center",
   },
   segmentText: {
-    fontSize: responsiveFontSize(1.7),
-    color: "#1a1a1a",
+    fontSize: responsiveFontSize(1.6),
+    color: "#666",
     fontWeight: "600",
+    fontFamily: "Poppins_600SemiBold",
   },
   segmentTextActive: {
     color: "#fff",
   },
-  prevHeader: {
-    fontSize: responsiveFontSize(1.9),
-    fontWeight: "700",
-    color: "#1a1a1a",
-    marginBottom: responsiveHeight(1),
-  },
-  prevItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: responsiveHeight(1.4),
-  },
-  prevTitle: {
-    fontSize: responsiveFontSize(1.7),
-    fontWeight: "600",
-    color: "#1a1a1a",
-  },
-  prevSubtitle: {
-    fontSize: responsiveFontSize(1.5),
-    color: "#6B7280",
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: ORANGE,
-    marginLeft: responsiveWidth(2),
-  },
+
+  // Submit Button
   submitBtn: {
     marginTop: responsiveHeight(2),
     backgroundColor: ORANGE,
-    borderRadius: 10,
+    borderRadius: 8,
     alignItems: "center",
     paddingVertical: responsiveHeight(1.8),
-    marginBottom: responsiveHeight(4),
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitText: {
     color: "#fff",
-    fontSize: responsiveFontSize(1.9),
+    fontSize: responsiveFontSize(2.2),
     fontWeight: "700",
+    fontFamily: "Poppins_700Bold",
   },
 })
 
