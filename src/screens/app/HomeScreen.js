@@ -165,8 +165,8 @@ const HomeScreen= () => {
 
     Animated.parallel([
       Animated.spring(animatedHeight, {
-        // Expandido a 60% para ver menú, Colapsado a 12% para seguridad notch
-        toValue: newExpandedState ? responsiveHeight(50) : responsiveHeight(9),
+        // Aumentamos a 70% para que entren las 4 filas cómodamente
+        toValue: newExpandedState ? responsiveHeight(70) : responsiveHeight(9),
         useNativeDriver: false,
         tension: 50,
         friction: 7,
@@ -248,49 +248,57 @@ const HomeScreen= () => {
 
         {isExpanded && (
           <View style={styles.menuContent}>
-            <View style={styles.row}>
-              <TouchableOpacity style={{...styles.logoutButton, width: "33%"}} onPress={() => navigation.navigate("Profile")}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#f2edee" }}>
-                  <IconComponent name="profile" />
+            {/* Fila 1: Perfil (Centro) */}
+            <View style={styles.menuRow}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate("Profile")}>
+                <View style={styles.menuIconContainer}>
+                  <IconComponent name="profile" style={styles.menuIcon} />
                 </View>
-                <Text style={styles.logoutText}>Mi perfil</Text>
+                <Text style={styles.menuItemText}>Mi perfil</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.row}>
-              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => handleAction("Incidencias")}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#e91c1cff" }}>
-                  <IconComponent name="calendar" />
+
+            {/* Fila 2: Acciones (Separadas para la parte ancha) */}
+            <View style={[styles.menuRow, { gap: responsiveWidth(25) }]}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Incidencias")}>
+                <View style={styles.menuIconContainer}>
+                  <IconComponent name="calendar" style={styles.menuIcon} />
                 </View>
-                <Text style={styles.logoutText}>Reportar Incidencias</Text>
+                <Text style={styles.menuItemText}>Incidencias</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={{...styles.logoutButton, width: "50%"}} onPress={() => handleAction("FinalState")}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#7781e0" }}>
-                  <IconComponent name="home" />
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Peritaje")}>
+                <View style={styles.menuIconContainer}>
+                  <IconComponent name="inspection" style={styles.menuIcon} />
                 </View>
-                <Text style={styles.logoutText}>Estado final</Text>
+                <Text style={styles.menuItemText}>Peritaje</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.row}>
-               <TouchableOpacity style={styles.logoutButton} onPress={() => handleAction("Peritaje")}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#f5c951" }}>
-                  <IconComponent name="inspection" />
+
+            {/* Fila 3: Estados (Más juntas para cerrar la curva) */}
+            <View style={[styles.menuRow, { gap: responsiveWidth(8) }]}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("InitialState")}>
+                <View style={styles.menuIconContainer}>
+                  <IconComponent name="form-icon" style={styles.menuIcon} />
                 </View>
-                <Text style={styles.logoutText}>Solicitar peritaje</Text>
+                <Text style={styles.menuItemText}>Estado{"\n"}inicial</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.logoutButton} onPress={() => handleAction("InitialState")}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                  <IconComponent name="form-icon" />
+
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("FinalState")}>
+                <View style={styles.menuIconContainer}>
+                  <IconComponent name="home" style={styles.menuIcon} />
                 </View>
-                <Text style={styles.logoutText}>Estado inicial</Text>
+                <Text style={styles.menuItemText}>Estado{"\n"}final</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.row}>
-              <TouchableOpacity style={styles.logoutButton} onPress={handleSignOut}>
-                <View style={{ ...styles.iconContainer, backgroundColor: "white", borderRadius: 50 }}>
-                  <IconComponent name="logout" />
+
+            {/* Fila 4: Salir (Centro, arriba de la flecha) */}
+            <View style={styles.menuRow}>
+              <TouchableOpacity style={styles.menuItem} onPress={handleSignOut}>
+                <View style={styles.menuIconContainer}>
+                  <IconComponent name="logout" style={styles.menuIcon} />
                 </View>
-                <Text style={styles.logoutText}>Cerrar Sesión</Text>
+                <Text style={styles.menuItemText}>Salir</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -488,7 +496,7 @@ const HomeScreen= () => {
               <View style={{ ...styles.iconContainer, backgroundColor: "#E6E8FF" }}>
                 <IconComponent name="home" />
               </View>
-              <Text style={styles.optionTitle}>Registrar</Text>
+              <Text style={styles.optionTitle}>Registro</Text>
               <Text style={styles.optionSubtitle}>Estado inicial</Text>
             </TouchableOpacity>
 
@@ -504,7 +512,7 @@ const HomeScreen= () => {
               <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
                 <IconComponent name="form-icon" />
               </View>
-              <Text style={styles.optionTitle}>Registrar</Text>
+              <Text style={styles.optionTitle}>Registro</Text>
               <Text style={styles.optionSubtitle}>Estado final</Text>
             </TouchableOpacity>
           </View>
@@ -644,21 +652,49 @@ const styles = StyleSheet.create({
   },
   menuContent: {
     position: "absolute",
-    display: "flex",
-    flexDirection: "column",
     top: responsiveHeight(8),
     left: 0,
     right: 0,
-    bottom: 0,
-    paddingHorizontal: responsiveWidth(6),
+    bottom: responsiveHeight(12), // Espacio inferior para la flecha
+    paddingHorizontal: responsiveWidth(4),
     zIndex: 5,
+    justifyContent: "space-between", // Distribuye las filas verticalmente
+    alignItems: "center",
   },
-  row: {
+  menuRow: {
     flexDirection: "row",
     justifyContent: "center",
+    alignItems: "flex-start",
+    width: "100%",
+  },
+  menuItem: {
     alignItems: "center",
-    gap: responsiveWidth(6),
-    marginBottom: responsiveHeight(2),
+    width: responsiveWidth(28), // Aumentado para dar más margen al texto
+  },
+  menuIconContainer: {
+    width: responsiveWidth(18), // Aumentado de 14 a 18
+    height: responsiveWidth(18),
+    borderRadius: responsiveWidth(9),
+    backgroundColor: "#fff",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 8,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 8, // Sombra más pronunciada
+  },
+  menuIcon: {
+    color: "#FF5A1F",
+    fontSize: responsiveFontSize(3.8), // Icono más grande (antes 3)
+  },
+  menuItemText: {
+    color: "#fff",
+    fontSize: responsiveFontSize(1.7), // Texto ligeramente más grande
+    fontWeight: "600",
+    textAlign: "center",
+    fontFamily: "Poppins_600SemiBold",
   },
   scrollContent: {
     flexGrow: 1,

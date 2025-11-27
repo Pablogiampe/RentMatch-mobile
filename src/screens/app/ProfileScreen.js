@@ -10,27 +10,73 @@ import {
   TextInput,
   Alert,
   Switch,
+  ActivityIndicator,
 } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
+import { useAuth } from "../../contexts/AuthContext"
+import Home from "../../../RentMatch_mobile/assets/home"
+import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 
 const ORANGE = "#FF5A1F"
-const LIGHT_BG = "#F8F9FB"
-const CARD_BORDER = "#E5E7EB"
+const CARD_BORDER = "rgba(105, 138, 238, 0.3)"
 
 const ProfileScreen = ({ navigation }) => {
+  const { user } = useAuth()
+
+  let [fontsLoaded] = useFonts({
+    Poppins_400Regular,
+    Poppins_600SemiBold,
+    Poppins_700Bold,
+  })
+
   const TABS = [
-    { key: "datos", label: "Datos personales" },
+    { key: "datos", label: "Datos" },
     { key: "verificacion", label: "Verificación" },
     { key: "seguridad", label: "Seguridad" },
   ]
   const [activeTab, setActiveTab] = useState("datos")
 
+  // Helper para separar nombre y apellido
+  const getNames = (fullName) => {
+    if (!fullName) return { first: "", last: "" }
+    const parts = fullName.trim().split(" ")
+    const first = parts[0] || ""
+    const last = parts.slice(1).join(" ") || ""
+    return { first, last }
+  }
+
+  const { first: initialFirst, last: initialLast } = getNames(user?.full_name)
+
   // Datos personales
-  const [firstName, setFirstName] = useState("Eduardo")
-  const [lastName, setLastName] = useState("Gómez")
-  const [email, setEmail] = useState("eduardo.gomez@example.com")
-  const [phone, setPhone] = useState("+54 9 11 5678-9012")
-  const datosInitial = useRef({ firstName, lastName, email, phone })
+  const [firstName, setFirstName] = useState(initialFirst)
+  const [lastName, setLastName] = useState(initialLast)
+  const [email, setEmail] = useState(user?.email || "")
+  const [phone, setPhone] = useState(user?.phone || "")
+  
+  const datosInitial = useRef({ 
+    firstName: initialFirst, 
+    lastName: initialLast, 
+    email: user?.email || "", 
+    phone: user?.phone || "" 
+  })
+
+  // Sincronizar estado cuando carga el usuario
+  useEffect(() => {
+    if (user) {
+      const { first, last } = getNames(user.full_name)
+      setFirstName(first)
+      setLastName(last)
+      setEmail(user.email || "")
+      setPhone(user.phone || "")
+      
+      datosInitial.current = { 
+        firstName: first, 
+        lastName: last, 
+        email: user.email || "", 
+        phone: user.phone || "" 
+      }
+    }
+  }, [user])
 
   // Verificación
   const [dniStatus, setDniStatus] = useState("Pendiente") // Pendiente | Verificado | Rechazado
@@ -164,6 +210,10 @@ const ProfileScreen = ({ navigation }) => {
     })
     return unsub
   }, [navigation, getActiveDirty])
+
+  if (!fontsLoaded) {
+    return <View style={styles.loadingContainer}><ActivityIndicator size="large" color={ORANGE} /></View>
+  }
 
   // Render sections
   const SectionCard = ({ title, children, danger }) => (
@@ -388,6 +438,7 @@ const ProfileScreen = ({ navigation }) => {
 
   return (
     <View style={styles.screen}>
+      <Home style={{ position: "absolute", top: 0, left: 0 }} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Back + Title */}
         <View style={styles.headerRow}>
@@ -432,11 +483,17 @@ const ProfileScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: LIGHT_BG,
+    backgroundColor: "#fff",
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
   },
   scrollContent: {
     paddingHorizontal: responsiveWidth(5),
-    paddingTop: responsiveHeight(2),
+    paddingTop: responsiveHeight(6), // Increased top padding for header
   },
   headerRow: {
     flexDirection: "row",
@@ -451,16 +508,18 @@ const styles = StyleSheet.create({
   backIcon: {
     fontSize: responsiveFontSize(3),
     color: "#1a1a1a",
+    fontFamily: 'Poppins_600SemiBold',
   },
   screenTitle: {
     fontSize: responsiveFontSize(2.6),
-    fontWeight: "700",
+    fontFamily: 'Poppins_700Bold',
     color: "#1a1a1a",
   },
   subtitle: {
     fontSize: responsiveFontSize(1.6),
     color: "#5B616A",
     marginBottom: responsiveHeight(2),
+    fontFamily: 'Poppins_400Regular',
   },
   tabRow: {
     flexDirection: "row",
@@ -470,6 +529,11 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(2),
     borderWidth: 1,
     borderColor: "#E5E7EB",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   tabBtn: {
     flex: 1,
@@ -482,7 +546,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: responsiveFontSize(1.6),
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
     color: "#374151",
   },
   tabTextActive: {
@@ -495,6 +559,11 @@ const styles = StyleSheet.create({
     marginBottom: responsiveHeight(2),
     borderWidth: 1,
     borderColor: CARD_BORDER,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   cardDanger: {
     borderColor: "#FECACA",
@@ -502,7 +571,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: responsiveFontSize(1.9),
-    fontWeight: "700",
+    fontFamily: 'Poppins_700Bold',
     color: "#1A1A1A",
     marginBottom: responsiveHeight(1.5),
   },
@@ -511,18 +580,21 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: responsiveFontSize(1.5),
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
     color: "#1f2937",
     marginBottom: responsiveHeight(0.6),
   },
   input: {
     backgroundColor: "#F1F4FF",
-    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: "rgba(105, 138, 238, 0.5)",
+    borderRadius: 8,
     paddingHorizontal: responsiveWidth(3),
     paddingVertical: responsiveHeight(1.2),
     fontSize: responsiveFontSize(1.7),
     color: "#111827",
     marginBottom: responsiveHeight(1.8),
+    fontFamily: 'Poppins_400Regular',
   },
   inputRow: {
     flexDirection: "row",
@@ -545,7 +617,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: responsiveFontSize(1.3),
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
     color: "#065F46",
   },
   primaryBtn: {
@@ -553,11 +625,16 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingVertical: responsiveHeight(1.6),
     alignItems: "center",
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   primaryBtnText: {
     color: "#fff",
     fontSize: responsiveFontSize(1.7),
-    fontWeight: "700",
+    fontFamily: 'Poppins_700Bold',
   },
   secondaryBtn: {
     backgroundColor: "#fff",
@@ -570,7 +647,7 @@ const styles = StyleSheet.create({
   secondaryBtnText: {
     color: ORANGE,
     fontSize: responsiveFontSize(1.6),
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
   },
   dangerBtn: {
     backgroundColor: "#FDE1E1",
@@ -582,18 +659,20 @@ const styles = StyleSheet.create({
   },
   dangerBtnText: {
     color: "#B91C1C",
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
     fontSize: responsiveFontSize(1.5),
   },
   dangerText: {
     fontSize: responsiveFontSize(1.5),
     color: "#7F1D1D",
+    fontFamily: 'Poppins_400Regular',
   },
   bodyText: {
     fontSize: responsiveFontSize(1.5),
     color: "#4B5563",
     lineHeight: responsiveHeight(2.4),
     marginBottom: responsiveHeight(1.6),
+    fontFamily: 'Poppins_400Regular',
   },
   dniRow: {
     flexDirection: "row",
@@ -616,13 +695,14 @@ const styles = StyleSheet.create({
   },
   dniLabel: {
     fontSize: responsiveFontSize(1.6),
-    fontWeight: "700",
+    fontFamily: 'Poppins_700Bold',
     color: "#1F2937",
   },
   dniStatusText: {
     fontSize: responsiveFontSize(1.3),
     color: "#6B7280",
     marginTop: responsiveHeight(0.2),
+    fontFamily: 'Poppins_400Regular',
   },
   statusBadge: {
     paddingHorizontal: responsiveWidth(3),
@@ -640,7 +720,7 @@ const styles = StyleSheet.create({
   },
   statusBadgeTextSmall: {
     fontSize: responsiveFontSize(1.2),
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
   },
   toggleRow: {
     flexDirection: "row",
@@ -649,13 +729,14 @@ const styles = StyleSheet.create({
   },
   toggleTitle: {
     fontSize: responsiveFontSize(1.6),
-    fontWeight: "600",
+    fontFamily: 'Poppins_600SemiBold',
     color: "#111827",
   },
   toggleSubtitle: {
     fontSize: responsiveFontSize(1.3),
     color: "#6B7280",
     marginTop: responsiveHeight(0.3),
+    fontFamily: 'Poppins_400Regular',
   },
   toggleDivider: {
     height: 1,
