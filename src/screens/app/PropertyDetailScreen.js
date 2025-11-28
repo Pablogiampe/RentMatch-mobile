@@ -64,7 +64,7 @@ const PropertyDetailScreen = () => {
 
       {/* Botón Volver Flotante */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <IconComponent name="back-arrow" style={styles.backIcon} />
+        <IconComponent color="grey" name="back-arrow" style={styles.backIcon} />
       </TouchableOpacity>
 
       <ScrollView 
@@ -207,12 +207,11 @@ const styles = StyleSheet.create({
     top: responsiveHeight(6),
     left: responsiveWidth(5),
     zIndex: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
     padding: 10,
     borderRadius: 12,
   },
   backIcon: {
-    color: '#fff',
+    color: '#FFf',
     fontSize: 20,
   },
   scrollContent: {

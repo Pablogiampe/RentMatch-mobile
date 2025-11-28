@@ -132,7 +132,6 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: "#F9FAFB",
   },
   backIcon: {
     fontSize: 20,

@@ -41,7 +41,6 @@ const FinalStateScreen = ({ route, navigation }) => {
       [
         { text: "Cancelar", style: "cancel" },
         { text: "Descartar", style: "destructive", onPress: onProceed },
-        { text: "Guardar borrador", onPress: () => { handleSaveDraft(); onProceed() } },
       ]
     )
   }
@@ -82,9 +81,7 @@ const FinalStateScreen = ({ route, navigation }) => {
 
   const removeImage = (id) => setImages((prev) => prev.filter((i) => i.id !== id))
 
-  const handleSaveDraft = () => {
-    Alert.alert("Borrador guardado", "Se guardó el registro final como borrador.")
-  }
+ 
 
   const handleSubmit = async () => {
     if (!contractId) {
@@ -233,9 +230,7 @@ const FinalStateScreen = ({ route, navigation }) => {
             )}
 
             {/* Botones */}
-            <TouchableOpacity style={styles.draftBtn} onPress={handleSaveDraft}>
-              <Text style={styles.draftText}>Guardar Borrador</Text>
-            </TouchableOpacity>
+        
 
             <TouchableOpacity 
               style={[styles.submitBtn, submitting && { opacity: 0.7 }]} 

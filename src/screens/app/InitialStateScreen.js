@@ -32,19 +32,12 @@ const InitialStateScreen = ({ route, navigation }) => {
   const fullAddress = [address, neighborhood].filter(Boolean).join(", ")
 
   const confirmLeaveIfDirty = (onProceed) => {
-    if (!isDirty) {
+    if (isDirty) {
       onProceed()
       return
     }
-    Alert.alert(
-      "Salir",
-      "Tenés cambios sin guardar. ¿Guardar como borrador o descartar?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Descartar", style: "destructive", onPress: onProceed },
-        { text: "Guardar borrador", onPress: () => { handleSaveDraft(); onProceed() } },
-      ]
-    )
+    onProceed()
+      return
   }
 
   const handleBack = () => confirmLeaveIfDirty(() => navigation.goBack())
@@ -239,10 +232,7 @@ const InitialStateScreen = ({ route, navigation }) => {
               </View>
             )}
 
-            {/* Botones */}
-            <TouchableOpacity style={styles.draftBtn} onPress={handleSaveDraft}>
-              <Text style={styles.draftText}>Guardar Borrador</Text>
-            </TouchableOpacity>
+          
 
             <TouchableOpacity 
               style={[styles.submitBtn, submitting && { opacity: 0.7 }]} 

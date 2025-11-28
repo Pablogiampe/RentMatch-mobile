@@ -55,24 +55,15 @@ const IncidenciasScreen = ({ route, navigation }) => {
 
   const removeImage = (id) => setImages((prev) => prev.filter((i) => i.id !== id))
 
-  const handleSaveDraft = () => {
-    Alert.alert("Borrador guardado", "Se guardó como borrador.")
-  }
+  
 
   const confirmLeaveIfDirty = (onProceed) => {
-    if (!isDirty) {
+    if (isDirty) {
       onProceed()
       return
     }
-    Alert.alert(
-      "Salir",
-      "Tenés cambios sin guardar. ¿Querés guardarlos como borrador o descartar lo escrito?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Descartar", style: "destructive", onPress: onProceed },
-        { text: "Guardar borrador", onPress: () => { handleSaveDraft(); onProceed() } },
-      ]
-    )
+    onProceed()
+      return
   }
 
   const handleBack = () => confirmLeaveIfDirty(() => navigation.goBack())
