@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react"
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator, RefreshControl, FlatList, Alert, PanResponder } from "react-native"
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated, ActivityIndicator, RefreshControl, FlatList, PanResponder } from "react-native"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useAuth } from "../../contexts/AuthContext"
 import { useRental } from "../../contexts/RentalContext"
@@ -7,6 +7,7 @@ import Home from "../../../RentMatch_mobile/assets/home"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 import { useNavigation } from "@react-navigation/native"
+import CustomAlert from "../../components/CustomAlert"
 
 // Constantes para el carrusel
 const CARD_WIDTH = responsiveWidth(88)
@@ -23,6 +24,42 @@ const HomeScreen= () => {
   const [selectedRental, setSelectedRental] = useState(null)
   // Nuevo estado para controlar el índice activo visualmente
   const [activeIndex, setActiveIndex] = useState(0)
+
+  // Estado para CustomAlert
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: ""
+  })
+
+  const showAlert = (title, message) => {
+    setAlertConfig({ visible: true, title, message })
+  }
+
+  const hideAlert = () => {
+    setAlertConfig({ ...alertConfig, visible: false })
+  }
+
+  // Lógica para validar si se puede acceder al Estado Final (5 días antes del fin de contrato)
+  const finalStateStatus = useMemo(() => {
+    if (!selectedRental || !selectedRental.end_date) return { enabled: false, days: null }
+
+    const endDate = new Date(selectedRental.end_date)
+    const today = new Date()
+    // Normalizar horas para comparar solo fechas
+    endDate.setHours(0, 0, 0, 0)
+    today.setHours(0, 0, 0, 0)
+
+    const diffTime = endDate - today
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    // Habilitar si faltan 5 días o menos (o si ya pasó la fecha)
+    return {
+      enabled: diffDays <= 5,
+      days: diffDays
+    }
+  }, [selectedRental])
+
   const [nextPeritaje, setNextPeritaje] = useState(null) // Estado para el próximo peritaje
   const flatListRef = useRef(null)
   const scrollX = useRef(new Animated.Value(0)).current // Referencia para animación fluida
@@ -261,7 +298,7 @@ const HomeScreen= () => {
   // Función auxiliar para navegar con el contexto del alquiler seleccionado
   const handleAction = (screenName) => {
     if (!selectedRental) {
-      Alert.alert("Selección requerida", "Por favor, selecciona un alquiler activo arriba para continuar.")
+      showAlert("Selección requerida", "Por favor, selecciona un alquiler activo arriba para continuar.")
       return
     }
     
@@ -358,9 +395,20 @@ const HomeScreen= () => {
                 <Text style={styles.menuItemText}>Estado{"\n"}inicial</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("FinalState")}>
-                <View style={styles.menuIconContainer}>
-                  <IconComponent name="home" style={styles.menuIcon} />
+              <TouchableOpacity 
+                style={[styles.menuItem, !finalStateStatus.enabled && { opacity: 0.5 }]} 
+                onPress={() => {
+                  if (!selectedRental) return handleAction("FinalState") // Deja que handleAction maneje el error de selección
+                  
+                  if (finalStateStatus.enabled) {
+                    handleAction("FinalState")
+                  } else {
+                    showAlert("Aún no disponible", `El registro de estado final se habilitará 5 días antes de finalizar el contrato.\n\nFaltan ${finalStateStatus.days} días.`)
+                  }
+                }}
+              >
+                <View style={[styles.menuIconContainer, !finalStateStatus.enabled && { backgroundColor: '#E5E7EB' }]}>
+                  <IconComponent name="home" style={[styles.menuIcon, !finalStateStatus.enabled && { color: '#9CA3AF' }]} />
                 </View>
                 <Text style={styles.menuItemText}>Estado{"\n"}final</Text>
               </TouchableOpacity>
@@ -608,12 +656,28 @@ const HomeScreen= () => {
               <Text style={styles.optionSubtitle}>Peritaje</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("FinalState")}>
-              <View style={{ ...styles.iconContainer, backgroundColor: "#DCFCE7" }}>
-                <IconComponent name="form-icon" />
+            <TouchableOpacity 
+              style={[
+                styles.optionCard, 
+                !finalStateStatus.enabled && { backgroundColor: "#F9FAFB", borderColor: "#F3F4F6" }
+              ]} 
+              onPress={() => {
+                if (!selectedRental) return handleAction("FinalState")
+
+                if (finalStateStatus.enabled) {
+                  handleAction("FinalState")
+                } else {
+                  showAlert("Aún no disponible", `El registro de estado final se habilitará 5 días antes de finalizar el contrato.\n\nFaltan ${finalStateStatus.days} días.`)
+                }
+              }}
+            >
+              <View style={{ ...styles.iconContainer, backgroundColor: finalStateStatus.enabled ? "#DCFCE7" : "#E5E7EB" }}>
+                <IconComponent name="form-icon" style={!finalStateStatus.enabled ? { color: "#9CA3AF" } : {}} />
               </View>
-              <Text style={styles.optionTitle}>Registro</Text>
-              <Text style={styles.optionSubtitle}>Estado final</Text>
+              <Text style={[styles.optionTitle, !finalStateStatus.enabled && { color: "#9CA3AF" }]}>Estado Final</Text>
+              <Text style={[styles.optionSubtitle, !finalStateStatus.enabled && { color: "#9CA3AF", fontSize: responsiveFontSize(1.4) }]}>
+                {finalStateStatus.enabled ? "Estado final" : `En ${finalStateStatus.days} días`}
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -664,6 +728,13 @@ const HomeScreen= () => {
 
         </View>
       </ScrollView>
+
+      <CustomAlert 
+        visible={alertConfig.visible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onClose={hideAlert}
+      />
     </View>
   )
 }
