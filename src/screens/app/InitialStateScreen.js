@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native"
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import * as ImagePicker from "expo-image-picker"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useAuth } from "../../contexts/AuthContext"
+import CustomAlert from "../../components/CustomAlert"
 
 const ORANGE = "#FF5A1F"
 
@@ -13,10 +14,27 @@ const InitialStateScreen = ({ route, navigation }) => {
   const { token, session } = useAuth()
   const activeToken = token || session
 
-  // ELIMINADO: const [title, setTitle] = useState("")
   const [description, setDescription] = useState("")
   const [images, setImages] = useState([])
   const [submitting, setSubmitting] = useState(false)
+
+  // Estado para CustomAlert
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    onClose: null
+  })
+
+  const showAlert = (title, message, onClose = null) => {
+    setAlertConfig({ visible: true, title, message, onClose })
+  }
+
+  const hideAlert = () => {
+    const callback = alertConfig.onClose
+    setAlertConfig({ visible: false, title: "", message: "", onClose: null })
+    if (callback) callback()
+  }
 
   const initialRef = useRef({ description: "", imagesLen: 0 })
   const isDirty =
@@ -32,12 +50,7 @@ const InitialStateScreen = ({ route, navigation }) => {
   const fullAddress = [address, neighborhood].filter(Boolean).join(", ")
 
   const confirmLeaveIfDirty = (onProceed) => {
-    if (isDirty) {
-      onProceed()
-      return
-    }
     onProceed()
-      return
   }
 
   const handleBack = () => confirmLeaveIfDirty(() => navigation.goBack())
@@ -54,7 +67,7 @@ const InitialStateScreen = ({ route, navigation }) => {
   const requestPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== "granted") {
-      Alert.alert("Permiso requerido", "Necesitamos acceso a tus fotos para subir imágenes.")
+      showAlert("Permiso requerido", "Necesitamos acceso a tus fotos para subir imágenes.")
       return false
     }
     return true
@@ -76,16 +89,13 @@ const InitialStateScreen = ({ route, navigation }) => {
 
   const removeImage = (id) => setImages((prev) => prev.filter((i) => i.id !== id))
 
-  const handleSaveDraft = () => {
-    Alert.alert("Borrador guardado", "Se guardó el registro inicial como borrador.")
-  }
-
   const handleSubmit = async () => {
     if (!contractId) {
-      return Alert.alert("Error", "No se encontró el contrato asociado.")
+      return showAlert("Error", "No se encontró el contrato asociado.")
     }
-    // ELIMINADO: if (!title.trim()) return Alert.alert("Falta título", "Por favor ingresá un título.")
-    if (!description.trim()) return Alert.alert("Falta descripción", "Por favor ingresá una descripción.")
+    if (!description.trim()) {
+      return showAlert("Falta descripción", "Por favor ingresá una descripción.")
+    }
 
     setSubmitting(true)
 
@@ -93,19 +103,16 @@ const InitialStateScreen = ({ route, navigation }) => {
       const formData = new FormData()
       formData.append("contract_id", String(contractId))
       
-      // RESTAURADO: Enviamos valores por defecto para campos que el backend requiere
       formData.append("title", "Estado Inicial")
       formData.append("description", description)
       formData.append("room", "General")
       formData.append("state", "media")
 
-      // Append images
       images.forEach((img) => {
         const filename = img.uri.split('/').pop()
         const match = /\.(\w+)$/.exec(filename)
         const type = match ? `image/${match[1]}` : `image/jpeg`
         
-        // CAMBIO: Volvemos a usar 'images' para coincidir con IncidenciasScreen
         formData.append('images', {
           uri: img.uri,
           name: filename,
@@ -119,12 +126,10 @@ const InitialStateScreen = ({ route, navigation }) => {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${activeToken}`,
-          // Content-Type se establece automáticamente con FormData
         },
         body: formData
       })
 
-      // CAMBIO: Leer texto primero para evitar el crash si devuelve HTML
       const responseText = await response.text()
       console.log("📩 Respuesta cruda servidor:", responseText)
 
@@ -132,7 +137,6 @@ const InitialStateScreen = ({ route, navigation }) => {
       try {
         data = JSON.parse(responseText)
       } catch (e) {
-        // Si falla el parseo, es porque devolvió HTML u otra cosa
         console.error("Error al parsear JSON:", e)
         throw new Error(`Error del servidor (${response.status}): La respuesta no es un JSON válido.`)
       }
@@ -143,22 +147,19 @@ const InitialStateScreen = ({ route, navigation }) => {
         throw new Error(data.message || "No se pudo enviar el registro.")
       }
 
-      Alert.alert("Registro enviado", "El estado inicial se ha registrado correctamente.", [
-        { 
-          text: "OK", 
-          onPress: () => {
-            // Limpiar formulario
-            // ELIMINADO: setTitle("")
-            setDescription("")
-            setImages([])
-            setTimeout(() => navigation.goBack(), 100)
-          } 
-        }
-      ])
+      // Limpiar formulario
+      setDescription("")
+      setImages([])
+
+      showAlert(
+        "Registro enviado",
+        "El estado inicial se ha registrado correctamente.",
+        () => setTimeout(() => navigation.goBack(), 100)
+      )
 
     } catch (error) {
       console.error("❌ Error submit:", error)
-      Alert.alert("Error", error.message || "Ocurrió un error al enviar.")
+      showAlert("Error", error.message || "Ocurrió un error al enviar.")
     } finally {
       setSubmitting(false)
     }
@@ -232,8 +233,7 @@ const InitialStateScreen = ({ route, navigation }) => {
               </View>
             )}
 
-          
-
+            {/* Botón Submit */}
             <TouchableOpacity 
               style={[styles.submitBtn, submitting && { opacity: 0.7 }]} 
               onPress={handleSubmit}
@@ -247,6 +247,13 @@ const InitialStateScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         </ScrollView>
+
+        <CustomAlert 
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+        />
       </View>
     </KeyboardAvoidingView>
   )

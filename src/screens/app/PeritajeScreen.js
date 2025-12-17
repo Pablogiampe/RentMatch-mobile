@@ -2,7 +2,7 @@
 // expo install react-native-calendars
 
 "use client"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import {
   View,
   Text,
@@ -12,40 +12,26 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   Modal,
-  Animated,
-  Dimensions,
 } from "react-native"
-import Checkbox from 'expo-checkbox'
 import { useNavigation, useRoute } from "@react-navigation/native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import { Calendar } from "react-native-calendars"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import IncidenciasSvg from "../../../RentMatch_mobile/assets/IncidenciasSvg"
 import { useAuth } from "../../contexts/AuthContext"
-
-const ITEM_HEIGHT = responsiveHeight(6)
-const { height: SCREEN_HEIGHT } = Dimensions.get('window')
+import CustomAlert from "../../components/CustomAlert"
 
 const PeritajeScreen = () => {
   const navigation = useNavigation()
   const route = useRoute()
-  // Extraemos tanto token como session por si acaso
   const { user, token, session } = useAuth()
-  // Usamos el que esté disponible
   const activeToken = token || session
 
-  // Recibir contract_id desde params o usar default
   const contractId = route.params?.contract_id || route.params?.contractId
   const propertyTitle = route.params?.title || "Propiedad"
 
-  // DEBUG: Verificar qué llega al entrar a la pantalla
-  useEffect(() => {
-    console.log("🔍 PeritajeScreen Params:", route.params)
-    console.log("🔍 Contract ID detectado:", contractId)
-  }, [])
-
+  // Estados del formulario
   const [reason, setReason] = useState("")
   const [description, setDescription] = useState("")
   const [date, setDate] = useState("")
@@ -57,26 +43,39 @@ const PeritajeScreen = () => {
   const [contactPhone, setContactPhone] = useState("")
   const [agree, setAgree] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const scrollViewRef = useRef(null)
-  const scrollY = useRef(new Animated.Value(0)).current
-  const [currentScrollIndex, setCurrentScrollIndex] = useState(0)
+  const [selectedTime, setSelectedTime] = useState(null)
 
-  // Valores animados para el checkbox
-  const checkboxScale = useState(new Animated.Value(1))[0]
-  const checkboxOpacity = useState(new Animated.Value(0.7))[0]
+  // Estado para CustomAlert
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    onClose: null
+  })
+
+  const showAlert = (title, message, onClose = null) => {
+    setAlertConfig({ visible: true, title, message, onClose })
+  }
+
+  const hideAlert = () => {
+    const callback = alertConfig.onClose
+    setAlertConfig({ visible: false, title: "", message: "", onClose: null })
+    if (callback) callback()
+  }
 
   useEffect(() => {
-    // ajustar header si querés back button nativo
+    console.log("🔍 PeritajeScreen Params:", route.params)
+    console.log("🔍 Contract ID detectado:", contractId)
+  }, [])
+
+  useEffect(() => {
     navigation.setOptions?.({
       headerShown: false,
     })
   }, [])
 
-  // Horarios disponibles con algunos ocupados (simulado)
   const getAvailableTimes = (dateString) => {
-    // Simular horarios ocupados según la fecha
     const occupiedTimes = {
-      // Ejemplo: algunos días tienen horarios ocupados
       '2024-01-15': ['10:00', '14:00'],
       '2024-01-16': ['11:00', '15:00'],
     }
@@ -93,14 +92,12 @@ const PeritajeScreen = () => {
     }))
   }
 
-  // Generar fechas disponibles (próximos 30 días, sin domingos)
   const getAvailableDates = () => {
     const marked = {}
     const today = new Date()
     for (let i = 1; i <= 30; i++) {
       const futureDate = new Date(today)
       futureDate.setDate(today.getDate() + i)
-      // Excluir domingos (0)
       if (futureDate.getDay() !== 0) {
         const dateString = futureDate.toISOString().split('T')[0]
         marked[dateString] = {
@@ -128,12 +125,18 @@ const PeritajeScreen = () => {
     setSelectedDateForTime(day.dateString)
   }
 
-  const onTimeSelect = (selectedTime) => {
-    if (selectedTime.occupied) {
-      Alert.alert("Horario ocupado", "Este horario ya está reservado. Por favor elegí otro.")
+  const onTimeSelect = (slot) => {
+    if (slot.occupied) {
+      showAlert("Horario ocupado", "Este horario ya está reservado. Por favor elegí otro.")
       return
     }
     
+    setSelectedTime(slot.time)
+  }
+
+  const confirmTimeSelection = () => {
+    if (!selectedTime || !selectedDateForTime) return
+
     const selectedDate = new Date(selectedDateForTime)
     const formatted = selectedDate.toLocaleDateString('es-AR', {
       day: '2-digit',
@@ -141,124 +144,24 @@ const PeritajeScreen = () => {
       year: 'numeric'
     })
     setDate(formatted)
-    setTime(selectedTime.time)
+    setTime(selectedTime)
     setShowCalendar(false)
     setSelectedDateForTime(null)
-  }
-
-  const handleScrollEnd = (event) => {
-    const offsetY = event.nativeEvent.contentOffset.y
-    const index = Math.round(offsetY / ITEM_HEIGHT)
-    setCurrentScrollIndex(index)
-  }
-
-  const TimePickerWheel = ({ times, onSelect }) => {
-    return (
-      <View style={styles.wheelContainer}>
-        <View style={styles.wheelOverlay}>
-          <View style={styles.wheelHighlight} />
-        </View>
-        <Animated.ScrollView
-          ref={scrollViewRef}
-          style={styles.wheelScroll}
-          contentContainerStyle={styles.wheelContent}
-          showsVerticalScrollIndicator={false}
-          snapToInterval={ITEM_HEIGHT}
-          decelerationRate="fast"
-          onScroll={Animated.event(
-            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-            { 
-              useNativeDriver: true,
-              listener: (event) => {
-                const offsetY = event.nativeEvent.contentOffset.y
-                const index = Math.round(offsetY / ITEM_HEIGHT)
-                setCurrentScrollIndex(index)
-              }
-            }
-          )}
-          scrollEventThrottle={16}
-          onMomentumScrollEnd={handleScrollEnd}
-        >
-          {/* Espaciadores para centrar */}
-          <View style={{ height: ITEM_HEIGHT * 2 }} />
-          
-          {times.map((slot, index) => {
-            const inputRange = [
-              (index - 3) * ITEM_HEIGHT,
-              (index - 2) * ITEM_HEIGHT,
-              (index - 1) * ITEM_HEIGHT,
-              index * ITEM_HEIGHT,
-              (index + 1) * ITEM_HEIGHT,
-              (index + 2) * ITEM_HEIGHT,
-              (index + 3) * ITEM_HEIGHT,
-            ]
-
-            const scale = scrollY.interpolate({
-              inputRange,
-              outputRange: [0.7, 0.8, 0.9, 1.1, 0.9, 0.8, 0.7],
-              extrapolate: 'clamp',
-            })
-
-            const opacity = scrollY.interpolate({
-              inputRange,
-              outputRange: [0.3, 0.4, 0.6, 1, 0.6, 0.4, 0.3],
-              extrapolate: 'clamp',
-            })
-            
-            return (
-              <TouchableOpacity
-                key={slot.time}
-                style={[
-                  styles.wheelItem,
-                  slot.occupied && styles.wheelItemOccupied,
-                ]}
-                onPress={() => {
-                  if (!slot.occupied) {
-                    scrollViewRef.current?.scrollTo({
-                      y: index * ITEM_HEIGHT,
-                      animated: true
-                    })
-                    setTimeout(() => onSelect(slot), 300)
-                  }
-                }}
-                disabled={slot.occupied}
-                activeOpacity={0.8}
-              >
-                <Animated.View style={{ transform: [{ scale }], opacity }}>
-                  <Text
-                    style={[
-                      styles.wheelItemText,
-                      slot.occupied && styles.wheelItemTextOccupied,
-                    ]}
-                  >
-                    {slot.occupied ? '🚫' : '🕐'} {slot.time}
-                  </Text>
-                  {slot.occupied && (
-                    <Text style={styles.wheelOccupiedLabel}>Ocupado</Text>
-                  )}
-                </Animated.View>
-              </TouchableOpacity>
-            )
-          })}
-          
-          {/* Espaciadores para centrar */}
-          <View style={{ height: ITEM_HEIGHT * 2 }} />
-        </Animated.ScrollView>
-      </View>
-    )
+    setSelectedTime(null)
   }
 
   const handleBackInTimeSelection = () => {
     setSelectedDateForTime(null)
+    setSelectedTime(null)
   }
 
   const handleCloseCalendar = () => {
     setShowCalendar(false)
     setSelectedDateForTime(null)
+    setSelectedTime(null)
     setTime("")
   }
 
-  // Función para animar cuando se presiona el checkbox
   const animateCheckboxPress = () => {
     Animated.sequence([
       Animated.timing(checkboxScale, {
@@ -279,7 +182,6 @@ const PeritajeScreen = () => {
     ]).start()
   }
 
-  // Función para animar la opacidad del checkbox
   const animateCheckboxOpacity = (isChecked) => {
     Animated.timing(checkboxOpacity, {
       toValue: isChecked ? 1 : 0.7,
@@ -295,36 +197,32 @@ const PeritajeScreen = () => {
   }
 
   const validateAndSubmit = async () => {
-    if (!reason.trim()) return Alert.alert("Falta razón", "Completá el campo Razón.")
-    if (!description.trim()) return Alert.alert("Falta descripción", "Completá la descripción.")
-    if (!date.trim() || !time.trim()) return Alert.alert("Falta fecha y horario", "Seleccioná fecha y horario.")
-    if (!contactName.trim()) return Alert.alert("Falta nombre", "Completá tu nombre.")
-    if (!contactEmail.trim()) return Alert.alert("Falta email", "Completá tu email.")
-    if (!contactPhone.trim()) return Alert.alert("Falta teléfono", "Completá tu teléfono.")
-    if (agree) return Alert.alert("Aceptar términos", "Aceptá los términos y condiciones para enviar.")
+    if (!reason.trim()) return showAlert("Falta razón", "Completá el campo Razón.")
+    if (!description.trim()) return showAlert("Falta descripción", "Completá la descripción.")
+    if (!date.trim() || !time.trim()) return showAlert("Falta fecha y horario", "Seleccioná fecha y horario.")
+    if (!contactName.trim()) return showAlert("Falta nombre", "Completá tu nombre.")
+    if (!contactEmail.trim()) return showAlert("Falta email", "Completá tu email.")
+    if (!contactPhone.trim()) return showAlert("Falta teléfono", "Completá tu teléfono.")
+    if (agree) return showAlert("Aceptar términos", "Aceptá los términos y condiciones para enviar.")
 
     if (!contractId) {
-      return Alert.alert("Error", "No se encontró el contrato asociado.")
+      return showAlert("Error", "No se encontró el contrato asociado.")
     }
 
     if (!user?.id) {
-      return Alert.alert("Error", "No se encontró información del usuario.")
+      return showAlert("Error", "No se encontró información del usuario.")
     }
 
-    // Validación extra para el token
     if (!activeToken) {
-      return Alert.alert("Sesión expirada", "No se encontró el token de seguridad. Por favor cerrá sesión y volvé a ingresar.")
+      return showAlert("Sesión expirada", "No se encontró el token de seguridad. Por favor cerrá sesión y volvé a ingresar.")
     }
 
     setSubmitting(true)
 
     try {
-      // Convertir fecha y hora al formato ISO
       const [day, month, year] = date.split('/')
       const dateTimeISO = `${year}-${month}-${day}T${time}:00Z`
 
-      // FIX: Enviamos ambas variantes de las claves (snake_case y camelCase)
-      // para asegurar que el backend encuentre el dato.
       const payload = {
         contract_id: contractId,
         contractId: contractId, 
@@ -343,7 +241,7 @@ const PeritajeScreen = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${activeToken}`, // Usamos activeToken
+          'Authorization': `Bearer ${activeToken}`,
         },
         body: JSON.stringify(payload),
       })
@@ -356,20 +254,15 @@ const PeritajeScreen = () => {
 
       console.log("Peritaje creado exitosamente:", data)
       
-      Alert.alert(
+      showAlert(
         "¡Solicitud enviada!",
         "Tu solicitud de peritaje fue registrada correctamente. Te contactaremos pronto.",
-        [
-          {
-            text: "OK",
-            onPress: () => navigation.goBack?.()
-          }
-        ]
+        () => setTimeout(() => navigation.goBack?.(), 100)
       )
 
     } catch (error) {
       console.error("Error al enviar peritaje:", error)
-      Alert.alert(
+      showAlert(
         "Error al enviar",
         error.message || "No se pudo enviar la solicitud. Intentá de nuevo más tarde."
       )
@@ -378,7 +271,6 @@ const PeritajeScreen = () => {
     }
   }
 
-  // Pre-cargar datos del usuario si están disponibles
   useEffect(() => {
     if (user?.full_name && !contactName) {
       setContactName(user.full_name)
@@ -494,8 +386,6 @@ const PeritajeScreen = () => {
               />
             </View>
 
-           
-
             <TouchableOpacity
               style={[styles.submitButton, submitting && styles.submitButtonDisabled]}
               onPress={validateAndSubmit}
@@ -517,89 +407,139 @@ const PeritajeScreen = () => {
               activeOpacity={1}
               onPress={handleCloseCalendar}
             >
-              <View style={styles.calendarContainer}>
-                <View style={styles.calendarHeader}>
-                  {selectedDateForTime && (
-                    <TouchableOpacity 
-                      onPress={handleBackInTimeSelection}
-                      style={styles.backButton}
-                    >
-                      <IconComponent name="back-arrow" />
-                    </TouchableOpacity>
-                  )}
-                  <Text style={styles.calendarTitle}>
-                    {selectedDateForTime ? "Seleccionar horario" : "Seleccionar fecha"}
-                  </Text>
-                  <TouchableOpacity onPress={handleCloseCalendar}>
-                    <Text style={styles.closeButton}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {!selectedDateForTime ? (
-                  <>
-                    <Calendar
-                      onDayPress={onDateSelect}
-                      markedDates={markedDates}
-                      minDate={new Date().toISOString().split('T')[0]}
-                      maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
-                      theme={{
-                        backgroundColor: '#ffffff',
-                        calendarBackground: '#ffffff',
-                        textSectionTitleColor: '#b6c1cd',
-                        selectedDayBackgroundColor: '#FF5A1F',
-                        selectedDayTextColor: '#ffffff',
-                        todayTextColor: '#FF5A1F',
-                        dayTextColor: '#2d4150',
-                        textDisabledColor: '#d9e1e8',
-                        dotColor: '#FF5A1F',
-                        selectedDotColor: '#ffffff',
-                        arrowColor: '#FF5A1F',
-                        monthTextColor: '#2d4150',
-                        textMonthFontWeight: '700',
-                        textDayFontSize: responsiveFontSize(1.8),
-                        textMonthFontSize: responsiveFontSize(2),
-                        textDayHeaderFontSize: responsiveFontSize(1.6),
-                      }}
-                      markingType="custom"
-                      hideExtraDays
-                    />
-                    <View style={styles.calendarFooter}>
-                      <Text style={styles.calendarHint}>
-                        📅 Disponibles de lunes a sábado
-                      </Text>
-                    </View>
-                  </>
-                ) : (
-                  <>
-                    <Text style={styles.timePickerSubtitle}>
-                      Deslizá para elegir tu horario (10:00 - 16:00)
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+              >
+                <View style={styles.calendarContainer}>
+                  <View style={styles.calendarHeader}>
+                    {selectedDateForTime && (
+                      <TouchableOpacity 
+                        onPress={handleBackInTimeSelection}
+                        style={styles.backButton}
+                      >
+                        <IconComponent name="back-arrow" />
+                      </TouchableOpacity>
+                    )}
+                    <Text style={styles.calendarTitle}>
+                      {selectedDateForTime ? "Seleccionar horario" : "Seleccionar fecha"}
                     </Text>
-                    <TimePickerWheel 
-                      times={getAvailableTimes(selectedDateForTime)}
-                      onSelect={onTimeSelect}
-                    />
-                    <TouchableOpacity
-                      style={styles.confirmTimeButton}
-                      onPress={() => {
-                        const times = getAvailableTimes(selectedDateForTime)
-                        onTimeSelect(times[currentScrollIndex])
-                      }}
-                    >
-                      <Text style={styles.confirmTimeText}>✓ Confirmar horario</Text>
+                    <TouchableOpacity onPress={handleCloseCalendar}>
+                      <Text style={styles.closeButton}>✕</Text>
                     </TouchableOpacity>
-                  </>
-                )}
-              </View>
+                  </View>
+
+                  {!selectedDateForTime ? (
+                    <>
+                      <Calendar
+                        onDayPress={onDateSelect}
+                        markedDates={markedDates}
+                        minDate={new Date().toISOString().split('T')[0]}
+                        maxDate={new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
+                        theme={{
+                          backgroundColor: '#ffffff',
+                          calendarBackground: '#ffffff',
+                          textSectionTitleColor: '#b6c1cd',
+                          selectedDayBackgroundColor: '#FF5A1F',
+                          selectedDayTextColor: '#ffffff',
+                          todayTextColor: '#FF5A1F',
+                          dayTextColor: '#2d4150',
+                          textDisabledColor: '#d9e1e8',
+                          dotColor: '#FF5A1F',
+                          selectedDotColor: '#ffffff',
+                          arrowColor: '#FF5A1F',
+                          monthTextColor: '#2d4150',
+                          textMonthFontWeight: '700',
+                          textDayFontSize: responsiveFontSize(1.8),
+                          textMonthFontSize: responsiveFontSize(2),
+                          textDayHeaderFontSize: responsiveFontSize(1.6),
+                        }}
+                        markingType="custom"
+                        hideExtraDays
+                      />
+                      <View style={styles.calendarFooter}>
+                        <Text style={styles.calendarHint}>
+                          📅 Disponibles de lunes a sábado
+                        </Text>
+                      </View>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.timePickerSubtitle}>
+                        Tocá para elegir tu horario (10:00 - 16:00)
+                      </Text>
+                      
+                      <ScrollView 
+                        style={styles.timeListScroll}
+                        contentContainerStyle={styles.timeListContainer}
+                        showsVerticalScrollIndicator={false}
+                      >
+                        {getAvailableTimes(selectedDateForTime).map((slot) => (
+                          <TouchableOpacity
+                            key={slot.time}
+                            style={[
+                              styles.timeSlotRow,
+                              selectedTime === slot.time && styles.timeSlotRowSelected,
+                              slot.occupied && styles.timeSlotRowOccupied,
+                            ]}
+                            onPress={() => onTimeSelect(slot)}
+                            disabled={slot.occupied}
+                            activeOpacity={0.7}
+                          >
+                            <View style={styles.timeSlotRowContent}>
+                              <View style={styles.timeSlotRowTextContainer}>
+                                <Text
+                                  style={[
+                                    styles.timeSlotRowText,
+                                    selectedTime === slot.time && styles.timeSlotRowTextSelected,
+                                    slot.occupied && styles.timeSlotRowTextOccupied,
+                                  ]}
+                                >
+                                  {slot.time}
+                                </Text>
+                                {slot.occupied && (
+                                  <Text style={styles.timeSlotRowOccupiedLabel}>No disponible</Text>
+                                )}
+                              </View>
+                              {selectedTime === slot.time && (
+                                <Text style={styles.timeSlotRowCheck}>✓</Text>
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.confirmTimeButton,
+                          !selectedTime && styles.confirmTimeButtonDisabled
+                        ]}
+                        onPress={confirmTimeSelection}
+                        disabled={!selectedTime}
+                      >
+                        <Text style={styles.confirmTimeText}>Confirmar horario</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </TouchableOpacity>
             </TouchableOpacity>
           </Modal>
         </ScrollView>
+
+        <CustomAlert 
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+        />
       </View>
     </KeyboardAvoidingView>
   )
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#fff" }, // Cambiado "none" por color válido
+  page: { flex: 1, backgroundColor: "#fff" },
   backgroundSvg: {
     position: "absolute",
     top: 0,
@@ -610,10 +550,9 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: responsiveWidth(4),
     alignItems: "center",
-    flexGrow: 1, // Permite que crezca si es necesario
-    paddingBottom: responsiveHeight(10), // Espacio extra al final para que no se corte el botón
+    flexGrow: 1,
+    paddingBottom: responsiveHeight(10),
   },
-  // container: { ... } ELIMINADO o reemplazado por scrollContent
   topBar: {
     width: "100%",
     flexDirection: "row",
@@ -639,8 +578,7 @@ const styles = StyleSheet.create({
   topSpacer: { width: 36 },
   card: {
     width: "100%",
-    // height: "100%", // ELIMINADO: Esto impedía el scroll
-    backgroundColor: "transparent", // Cambiado "none" por transparent
+    backgroundColor: "transparent",
     borderRadius: 10,
     padding: responsiveWidth(2),
   },
@@ -658,12 +596,12 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 3,
-    marginBottom: responsiveHeight(1.4), // espacio entre campos
+    marginBottom: responsiveHeight(1.4),
     paddingRight: responsiveWidth(2),
   },
   inputPassword: {
     height: 48,
-    width: "100%",              // ocupa todo el ancho
+    width: "100%",
     paddingHorizontal: 12,
     paddingVertical: 12,
     color: "#5c5858ff",
@@ -673,7 +611,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     overflow: "hidden",
   },
-  // multiline dentro del mismo contenedor
   inputMultilineContainer: {
     height: undefined,
     minHeight: responsiveHeight(12),
@@ -685,10 +622,8 @@ const styles = StyleSheet.create({
     minHeight: responsiveHeight(10),
     textAlignVertical: "top",
   },
-  // textos para la fila de fecha
   inputText: { color: "#5c5858ff", fontWeight: "600", fontSize: responsiveFontSize(1.8), paddingHorizontal: 12 },
   inputPlaceholder: { color: "#9BA3C7", fontWeight: "600", fontSize: responsiveFontSize(1.8), paddingHorizontal: 12 },
-  // (opcional) los estilos "input" y "textarea" antiguos pueden quedar sin uso
   propertyTitle: {
     textAlign: "center",
     fontSize: responsiveFontSize(2.4),
@@ -809,10 +744,6 @@ fontSize: responsiveFontSize(2),
     color: '#666',
     textAlign: 'center',
   },
-  clockIcon: {
-    marginRight: responsiveWidth(2),
-    color: '#9BA3C7',
-  },
   timePickerContainer: {
     width: responsiveWidth(90),
     maxHeight: responsiveHeight(60),
@@ -844,88 +775,100 @@ fontSize: responsiveFontSize(2),
     textAlign: 'center',
     fontWeight: '500',
   },
-  wheelContainer: {
-    height: responsiveHeight(35),
-    position: 'relative',
-    marginVertical: responsiveHeight(1),
+  timeListScroll: {
+    maxHeight: responsiveHeight(45),
   },
-  wheelOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 1,
-    pointerEvents: 'none',
+  timeListContainer: {
+    paddingVertical: responsiveHeight(0.5),
+    paddingHorizontal: responsiveWidth(18),
+
   },
-  wheelHighlight: {
-    width: '90%',
-    height: ITEM_HEIGHT,
-    backgroundColor: 'rgba(255, 90, 31, 0.1)',
-    borderRadius: 12,
+  timeSlotRow: {
+    width: '100%',
+    backgroundColor: '#FFF4EC',
     borderWidth: 2,
-    borderColor: '#FF5A1F',
-  },
-  wheelScroll: {
-    flex: 1,
-  },
-  wheelContent: {
+    borderColor: '#FFD6BF',
+    borderRadius: 10,
+    paddingVertical: responsiveHeight(1.2),
     paddingHorizontal: responsiveWidth(4),
+    marginBottom: responsiveHeight(0.8),
   },
-  wheelItem: {
-    height: ITEM_HEIGHT,
-    justifyContent: 'center',
+  timeSlotRowSelected: {
+    backgroundColor: '#FF5A1F',
+    borderColor: '#FF5A1F',
+    shadowColor: '#FF5A1F',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  timeSlotRowOccupied: {
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+    opacity: 0.5,
+  },
+  timeSlotRowContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: responsiveHeight(1),
+    justifyContent: 'center',
   },
-  wheelItemSelected: {
-    // El highlight ya está en overlay
+  timeSlotRowTextContainer: {
+    alignItems: 'center',
   },
-  wheelItemOccupied: {
-    opacity: 0.4,
-  },
-  wheelItemText: {
-    fontSize: responsiveFontSize(2),
-    fontWeight: '600',
-    color: '#2d4150',
+  timeSlotRowText: {
+    fontSize: responsiveFontSize(1.9),
+    fontWeight: '700',
+    color: '#FF5A1F',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
   },
-  wheelItemTextSelected: {
-    fontSize: responsiveFontSize(2.4),
-    color: '#FF5A1F',
-    fontWeight: '700',
+  timeSlotRowTextSelected: {
+    color: '#fff',
   },
-  wheelItemTextOccupied: {
+  timeSlotRowTextOccupied: {
     color: '#999',
     textDecorationLine: 'line-through',
   },
-  wheelOccupiedLabel: {
+  timeSlotRowOccupiedLabel: {
     fontSize: responsiveFontSize(1.2),
     color: '#999',
-    textAlign: 'center',
     marginTop: 2,
+    fontFamily: 'Poppins_400Regular',
+    textAlign: 'center',
+  },
+  timeSlotRowCheck: {
+    fontSize: responsiveFontSize(2.4),
+    color: '#fff',
+    fontWeight: '700',
+    position: 'absolute',
+    right: 0,
   },
   confirmTimeButton: {
+    marginTop: responsiveHeight(2),
     backgroundColor: '#FF5A1F',
     paddingVertical: responsiveHeight(1.8),
-    paddingHorizontal: responsiveWidth(8),
-    borderRadius: 12,
-    marginTop: responsiveHeight(2),
+    borderRadius: 8,
     alignItems: 'center',
     shadowColor: '#FF5A1F',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 6,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  confirmTimeButtonDisabled: {
+    backgroundColor: '#CCC',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    elevation: 2,
   },
   confirmTimeText: {
     color: '#fff',
-    fontSize: responsiveFontSize(1.9),
+    fontSize: responsiveFontSize(2),
     fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
   },
-  // Eliminar estilos antiguos de lista:
-  // timeList, timeSlot, timeSlotSelected, timeSlotOccupied, etc.
+  backButton: {
+    padding: 4,
+  },
 })
 export default PeritajeScreen

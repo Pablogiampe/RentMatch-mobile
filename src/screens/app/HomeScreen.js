@@ -453,6 +453,8 @@ const HomeScreen= () => {
         scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
+                      progressViewOffset={responsiveHeight(10)}
+
             refreshing={refreshing}
             onRefresh={onRefresh}
             colors={["#FF5A1F"]}
@@ -636,24 +638,21 @@ const HomeScreen= () => {
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFE3E3" }}>
                 <IconComponent name="calendar" />
               </View>
-              <Text style={styles.optionTitle}>Reportar</Text>
-              <Text style={styles.optionSubtitle}>Incidencias</Text>
+              <Text style={styles.optionTitle}>Incidencias</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("InitialState")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#E6E8FF" }}>
                 <IconComponent name="home" />
               </View>
-              <Text style={styles.optionTitle}>Registro</Text>
-              <Text style={styles.optionSubtitle}>Estado inicial</Text>
+              <Text style={styles.optionTitle}>Estado inicial</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Peritaje")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFF2CC" }}>
                 <IconComponent name="inspection" />
               </View>
-              <Text style={styles.optionTitle}>Solicitar</Text>
-              <Text style={styles.optionSubtitle}>Peritaje</Text>
+              <Text style={styles.optionTitle}>Peritajes</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -676,7 +675,7 @@ const HomeScreen= () => {
               </View>
               <Text style={[styles.optionTitle, !finalStateStatus.enabled && { color: "#9CA3AF" }]}>Estado Final</Text>
               <Text style={[styles.optionSubtitle, !finalStateStatus.enabled && { color: "#9CA3AF", fontSize: responsiveFontSize(1.4) }]}>
-                {finalStateStatus.enabled ? "Estado final" : `En ${finalStateStatus.days} días`}
+                {finalStateStatus.enabled ? "" : `En ${finalStateStatus.days} días`}
               </Text>
             </TouchableOpacity>
           </View>
@@ -937,17 +936,19 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     justifyContent: "space-between",
+    gap: responsiveWidth(1),
     marginBottom: responsiveHeight(4),
   },
   optionCard: {
-    width: "48%",
+    width: responsiveHeight(19.5),
+    height: responsiveHeight(14.2),
     backgroundColor: "#fff",
     borderRadius: 14,
     borderWidth: 1,
     borderColor: "#E5E7EB",
     padding: responsiveWidth(4),
     alignItems: "center",
-    marginBottom: responsiveHeight(2),
+    marginBottom: responsiveHeight(1),
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08,

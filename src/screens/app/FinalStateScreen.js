@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Image, Alert, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native"
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import * as ImagePicker from "expo-image-picker"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useAuth } from "../../contexts/AuthContext"
+import CustomAlert from "../../components/CustomAlert"
 
 const ORANGE = "#FF5A1F"
 
@@ -16,6 +17,24 @@ const FinalStateScreen = ({ route, navigation }) => {
   const [description, setDescription] = useState("")
   const [images, setImages] = useState([])
   const [submitting, setSubmitting] = useState(false)
+
+  // Estado para CustomAlert
+  const [alertConfig, setAlertConfig] = useState({
+    visible: false,
+    title: "",
+    message: "",
+    onClose: null
+  })
+
+  const showAlert = (title, message, onClose = null) => {
+    setAlertConfig({ visible: true, title, message, onClose })
+  }
+
+  const hideAlert = () => {
+    const callback = alertConfig.onClose
+    setAlertConfig({ visible: false, title: "", message: "", onClose: null })
+    if (callback) callback()
+  }
 
   const initialRef = useRef({ description: "", imagesLen: 0 })
   const isDirty =
@@ -35,14 +54,7 @@ const FinalStateScreen = ({ route, navigation }) => {
       onProceed()
       return
     }
-    Alert.alert(
-      "Salir",
-      "Tenés cambios sin guardar. ¿Guardar como borrador o descartar?",
-      [
-        { text: "Cancelar", style: "cancel" },
-        { text: "Descartar", style: "destructive", onPress: onProceed },
-      ]
-    )
+    onProceed()
   }
 
   const handleBack = () => confirmLeaveIfDirty(() => navigation.goBack())
@@ -59,7 +71,7 @@ const FinalStateScreen = ({ route, navigation }) => {
   const requestPermission = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
     if (status !== "granted") {
-      Alert.alert("Permiso requerido", "Necesitamos acceso a tus fotos para subir imágenes.")
+      showAlert("Permiso requerido", "Necesitamos acceso a tus fotos para subir imágenes.")
       return false
     }
     return true
@@ -81,43 +93,42 @@ const FinalStateScreen = ({ route, navigation }) => {
 
   const removeImage = (id) => setImages((prev) => prev.filter((i) => i.id !== id))
 
- 
-
   const handleSubmit = async () => {
     if (!contractId) {
-      return Alert.alert("Error", "No se encontró el contrato asociado.")
+      return showAlert("Error", "No se encontró el contrato asociado.")
     }
-    if (!description.trim()) return Alert.alert("Falta descripción", "Por favor ingresá una descripción.")
+    if (!description.trim()) {
+      return showAlert("Falta descripción", "Por favor ingresá una descripción.")
+    }
 
     setSubmitting(true)
 
     try {
       const formData = new FormData()
       formData.append("contract_id", String(contractId))
-      
-      // Valores por defecto requeridos por el backend (igual que InitialState)
-      formData.append("title", "Estado Final")
-      formData.append("description", description)
-      formData.append("room", "General")
-      formData.append("state", "media")
+      formData.append("description", description.trim())
 
-      // Append images
+      // Append images con el nombre correcto del campo
       images.forEach((img) => {
         const filename = img.uri.split('/').pop()
         const match = /\.(\w+)$/.exec(filename)
         const type = match ? `image/${match[1]}` : `image/jpeg`
         
-        formData.append('archivo', {
+        formData.append('images', {
           uri: img.uri,
           name: filename,
           type,
         })
       })
 
-      console.log("🚀 Enviando estado final...", { contractId, imagesCount: images.length })
+      console.log("🚀 Enviando estado final...", { 
+        contractId, 
+        description: description.trim(),
+        imagesCount: images.length 
+      })
 
-      // Asumo que el endpoint sigue el patrón de nomenclatura
-      const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-Final/finalState", {
+      // Endpoint correcto según el Postman
+      const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-End/endstate", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${activeToken}`,
@@ -126,7 +137,7 @@ const FinalStateScreen = ({ route, navigation }) => {
       })
 
       const responseText = await response.text()
-      console.log("📩 Respuesta cruda servidor:", responseText)
+      console.log("📩 Respuesta cruda servidor:", response.status, responseText)
 
       let data
       try {
@@ -136,26 +147,25 @@ const FinalStateScreen = ({ route, navigation }) => {
         throw new Error(`Error del servidor (${response.status}): La respuesta no es un JSON válido.`)
       }
 
-      console.log("📩 Respuesta parseada:", response.status, data)
+      console.log("📩 Respuesta parseada:", data)
 
       if (!response.ok) {
         throw new Error(data.message || "No se pudo enviar el registro.")
       }
 
-      Alert.alert("Registro enviado", "El estado final se ha registrado correctamente.", [
-        { 
-          text: "OK", 
-          onPress: () => {
-            setDescription("")
-            setImages([])
-            setTimeout(() => navigation.goBack(), 100)
-          } 
-        }
-      ])
+      // Limpiar formulario
+      setDescription("")
+      setImages([])
+
+      showAlert(
+        "Registro enviado",
+        "El estado final se ha registrado correctamente.",
+        () => setTimeout(() => navigation.goBack(), 100)
+      )
 
     } catch (error) {
       console.error("❌ Error submit:", error)
-      Alert.alert("Error", error.message || "Ocurrió un error al enviar.")
+      showAlert("Error", error.message || "Ocurrió un error al enviar.")
     } finally {
       setSubmitting(false)
     }
@@ -229,9 +239,7 @@ const FinalStateScreen = ({ route, navigation }) => {
               </View>
             )}
 
-            {/* Botones */}
-        
-
+            {/* Botón Submit */}
             <TouchableOpacity 
               style={[styles.submitBtn, submitting && { opacity: 0.7 }]} 
               onPress={handleSubmit}
@@ -245,6 +253,13 @@ const FinalStateScreen = ({ route, navigation }) => {
             </TouchableOpacity>
           </View>
         </ScrollView>
+
+        <CustomAlert 
+          visible={alertConfig.visible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          onClose={hideAlert}
+        />
       </View>
     </KeyboardAvoidingView>
   )
