@@ -23,10 +23,9 @@ import { useAuth } from "../../contexts/AuthContext"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
 
 const LoginScreen = ({ navigation }) => {
-  // const [email, setEmail] = useState("daviddf2497@gmail.com")
-  // const [password, setPassword] = useState("123123123")
-    const [email, setEmail] = useState("daviddf2497@gmail.com")
-  const [password, setPassword] = useState("123123123")
+
+    const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const { signIn, setSession, setUser } = useAuth()
