@@ -18,9 +18,9 @@
       "supportsTablet": true
     },
     "android": {
-            "icon": "./RentMatch_mobile/assets/icono-app.png",
+            "icon": "./RentMatch_mobile/assets/icono-android.png",
       "adaptiveIcon": {
-        "foregroundImage": "./RentMatch_mobile/assets/icono-app.png",
+        "foregroundImage": "./RentMatch_mobile/assets/icono-android.png",
         "backgroundColor": "#ffffff"
       },
        "splash": {
