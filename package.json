@@ -57,6 +57,7 @@
     "@types/node": "24.7.0",
     "@types/react": "~19.1.10",
     "@types/react-dom": "~19.1.7",
+    "babel-plugin-inline-dotenv": "^1.7.0",
     "babel-preset-expo": "~54.0.0",
     "patch-package": "^8.0.1",
     "postcss": "8.5.6",

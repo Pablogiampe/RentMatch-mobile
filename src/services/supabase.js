@@ -1,12 +1,28 @@
 import 'react-native-url-polyfill/auto';
-import { createClient } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { SUPABASE_URL, SUPABASE_ANON_KEY } from '@env';
+import { createClient } from '@supabase/supabase-js';
 
-console.log('🔗 Supabase URL:', SUPABASE_URL); // Para debug
+// ✅ Validación robusta con fallback
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
-const supabaseUrl = SUPABASE_URL;
-const supabaseAnonKey = SUPABASE_ANON_KEY;
+// Logging para debug (solo en desarrollo)
+if (__DEV__) {
+  console.log('🔗 Supabase URL:', supabaseUrl);
+  console.log('🔑 Supabase Key exists:', !!supabaseAnonKey);
+}
+
+// Validación antes de crear el cliente
+if (!supabaseUrl || !supabaseAnonKey) {
+  const errorMsg = `Supabase credentials missing:
+    URL: ${supabaseUrl ? '✅' : '❌'}
+    Key: ${supabaseAnonKey ? '✅' : '❌'}
+  `;
+  console.error(errorMsg);
+
+  // En producción, lanza un error más informativo
+  throw new Error('Supabase configuration is missing. Check your .env file.');
+}
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {

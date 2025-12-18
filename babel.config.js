@@ -1,15 +1,18 @@
-module.exports = function(api) {
-  api.cache(true);
+module.exports = function (api) {
+  api.cache(true)
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      ['module:react-native-dotenv', {
-        moduleName: '@env',
-        path: '.env',
-        safe: false,
-        allowUndefined: true,
-        verbose: false,
-      }]
-    ]
-  };
-};
+      // ✅ Plugin para cargar variables de entorno
+      [
+        'inline-dotenv',
+        {
+          path: '.env', // Ruta al archivo .env
+          safe: false,
+          systemVar: 'overwrite',
+        },
+      ],
+      // Otros plugins...
+    ],
+  }
+}

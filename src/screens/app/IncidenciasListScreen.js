@@ -132,15 +132,24 @@ const IncidenciasListScreen = ({ route, navigation }) => {
 
   // ✅ FIX: Función getImageUrl blindada contra nulos y tipos incorrectos
   const getImageUrl = (fileUrl) => {
-    if (!fileUrl || typeof fileUrl !== 'string') return null; 
+    // ✅ Agrega validación más robusta
+    if (!fileUrl) {
+      console.warn('fileUrl is null or undefined')
+      return null
+    }
     
-    if (fileUrl.startsWith('http')) return fileUrl;
+    if (typeof fileUrl !== 'string') {
+      console.warn('fileUrl is not a string:', typeof fileUrl)
+      return null
+    }
     
-    const cleanPath = fileUrl.replace(/\\/g, '/');
-    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
-    const path = cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath;
+    if (fileUrl.startsWith('http')) return fileUrl
     
-    return `${baseUrl}${path}`;
+    const cleanPath = fileUrl.replace(/\\/g, '/')
+    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`
+    const path = cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath
+    
+    return `${baseUrl}${path}`
   }
 
   // ✅ FIX: Parseo seguro de datos

@@ -153,22 +153,23 @@ const HomeScreen= () => {
   // USAMOS useMemo en lugar de useRef para que se actualice cuando cambia isExpanded
   const panResponder = useMemo(() => 
     PanResponder.create({
-      // Solo activar si el movimiento vertical es mayor que el horizontal (intención de scroll vertical)
+      onStartShouldSetPanResponder: () => false,
       onMoveShouldSetPanResponder: (_, gestureState) => {
+        // ✅ Agrega validación
+        if (!gestureState) return false
         return Math.abs(gestureState.dy) > 10 && Math.abs(gestureState.dy) > Math.abs(gestureState.dx)
       },
       onPanResponderRelease: (_, gestureState) => {
-        // Si arrastra hacia abajo (dy positivo) y no está expandido -> Expandir
+        if (!gestureState) return
+        
         if (gestureState.dy > 50 && !isExpanded) {
           toggleExpand()
-        }
-        // Si arrastra hacia arriba (dy negativo) y está expandido -> Colapsar
-        else if (gestureState.dy < -50 && isExpanded) {
+        } else if (gestureState.dy < -50 && isExpanded) {
           toggleExpand()
         }
       },
     }),
-    [isExpanded] // Dependencia clave para que el closure no quede obsoleto
+    [isExpanded, toggleExpand] // ✅ Agrega todas las dependencias
   )
 
   const handleSignOut = async () => {
