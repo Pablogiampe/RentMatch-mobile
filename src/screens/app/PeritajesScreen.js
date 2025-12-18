@@ -4,6 +4,7 @@ import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-nat
 import { useAuth } from "../../contexts/AuthContext"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
+import { useRoute } from "@react-navigation/native" // + leer params
 
 const ORANGE = "#FF5A1F"
 
@@ -12,6 +13,12 @@ const PeritajesScreen = ({ navigation }) => {
   const activeToken = token || session
   const [peritajes, setPeritajes] = useState([])
   const [loading, setLoading] = useState(true)
+  const route = useRoute() // +
+
+  // Params desde Home (se pasan cuando abrís "Peritajes" desde el carrusel)
+  const passedContractId = route.params?.contract_id || route.params?.contractId
+  const passedTitle = route.params?.title
+  const passedRental = route.params?.rentalData
 
   const [fontsLoaded] = useFonts({
     Poppins_400Regular,
@@ -87,8 +94,19 @@ const PeritajesScreen = ({ navigation }) => {
   }
 
   const handleNewPeritaje = () => {
-    // Navegar a formulario de nuevo peritaje
-    navigation.navigate("Peritaje")
+    // Navegar a formulario de nuevo peritaje con el contrato actual
+    const contractIdToUse = passedContractId || passedRental?.contract_id || passedRental?.id
+    if (!contractIdToUse) {
+      Alert.alert("Seleccioná un alquiler", "Volvé al Home y elegí un alquiler activo para solicitar el peritaje.")
+      return
+    }
+
+    navigation.navigate("Peritaje", {
+      contract_id: contractIdToUse,
+      contractId: contractIdToUse, // compat con PeritajeScreen
+      title: passedTitle || passedRental?.property_type || "Propiedad",
+      rentalData: passedRental,
+    })
   }
 
   const handlePeritajePress = (peritaje) => {

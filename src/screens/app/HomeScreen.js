@@ -62,9 +62,33 @@ const HomeScreen= () => {
     }
   }, [selectedRental])
 
+  // Helper: calcula disponibilidad del Estado Final para cualquier alquiler
+  const getFinalStateStatus = (rental) => {
+    if (!rental || !rental.end_date) return { enabled: false, days: null }
+    const endDate = new Date(rental.end_date)
+    const today = new Date()
+    endDate.setHours(0, 0, 0, 0)
+    today.setHours(0, 0, 0, 0)
+    const diffTime = endDate - today
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    return { enabled: diffDays <= 5, days: diffDays }
+  }
+  
   const [nextPeritaje, setNextPeritaje] = useState(null) // Estado para el próximo peritaje
   const flatListRef = useRef(null)
   const scrollX = useRef(new Animated.Value(0)).current // Referencia para animación fluida
+
+  // Detectar el ítem visible para actualizar selección
+  const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 60 }).current
+  const onViewableItemsChanged = useRef(({ viewableItems }) => {
+    if (!viewableItems || viewableItems.length === 0) return
+    const first = viewableItems[0]
+    if (first?.index == null) return
+    const i = first.index
+    setActiveIndex(i)
+    const rental = activeRentals[i]
+    if (rental) setSelectedRental(rental)
+  }).current
 
   // ✅ FIX: Leer datos directamente del nivel raíz (como viene en Postman)
   const getProp = (r) => {
@@ -256,6 +280,13 @@ const HomeScreen= () => {
     }
   }, [activeRentals])
 
+  // Refrescar selección cuando cambia el índice activo
+  useEffect(() => {
+    if (activeRentals && activeRentals[activeIndex]) {
+      setSelectedRental(activeRentals[activeIndex])
+    }
+  }, [activeIndex, activeRentals])
+
   // Debug: verificar estado de alquileres
   useEffect(() => {
     console.log('\n📋 ===== ESTADO ALQUILERES =====')
@@ -296,53 +327,44 @@ const HomeScreen= () => {
     outputRange: ["0deg", "180deg"],
   })
   
-  // const rentalsToShow = activeTab === "active" ? activeRentals : rentalHistory // ELIMINADO
+  // Rental actualmente visible en el carrusel (fallbacks seguros)
+  const currentRental = selectedRental || activeRentals[activeIndex] || (activeRentals && activeRentals[0]) || null
+  // FIX: no uses useMemo aquí para no cambiar el orden de hooks entre renders tempranos
+  const finalStatus = getFinalStateStatus(currentRental)
 
-  // Función auxiliar para navegar con el contexto del alquiler seleccionado
-  const handleAction = async (screenName) => {
-    if (!selectedRental) {
+  // Función auxiliar para navegar con el contexto del alquiler seleccionado o el visible
+  const handleAction = async (screenName, rentalParam = null) => {
+    const rental = rentalParam || currentRental
+    if (!rental) {
       showAlert("Selección requerida", "Por favor, selecciona un alquiler activo arriba para continuar.")
       return
     }
-    
-    const contractId = selectedRental.contract_id || selectedRental.id
-    const title = selectedRental.property_type 
-      ? `${capitalize(selectedRental.property_type)}` 
-      : "Propiedad"
 
-    // --- LÓGICA NUEVA PARA INITIAL STATE ---
+    const contractId = rental.contract_id || rental.id
+    const title = rental.property_type ? `${capitalize(rental.property_type)}` : "Propiedad"
+
     if (screenName === "InitialState") {
-      // ⚠️ Si no tienes "const [loading, setLoading] = useState(false)" definido arriba, comenta estas líneas:
-      // setLoading(true) 
-      
       const existingState = await checkInitialState(contractId)
-      
-      // setLoading(false)
-
       if (existingState) {
-        // Si ya existe, vamos al detalle
         navigation.navigate("InitialStateDetail", {
           initialState: existingState,
-                    rentalData: selectedRental,
-                              title: title,
-
-
+          rentalData: rental,
+          title,
         })
       } else {
-        // ✅ ESTO FALTABA: Si no existe, navegar al formulario de creación
         navigation.navigate("InitialState", {
           contract_id: contractId,
-          title: title,
-          rentalData: selectedRental
+          title,
+          rentalData: rental,
         })
       }
-      return // Importante: detener la ejecución aquí
+      return
     }
 
     navigation.navigate(screenName, {
       contract_id: contractId,
-      title: title,
-      rentalData: selectedRental
+      title,
+      rentalData: rental,
     })
   }
 
@@ -435,14 +457,14 @@ const HomeScreen= () => {
 
             {/* Fila 2: Acciones (Separadas para la parte ancha) */}
             <View style={[styles.menuRow, { gap: responsiveWidth(25) }]}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("IncidenciasList")}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("IncidenciasList", currentRental)}>
                 <View style={styles.menuIconContainer}>
                   <IconComponent name="calendar" width={39} height={39} />
                 </View>
                 <Text style={styles.menuItemText}>Incidencias</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Peritajes")}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Peritajes", currentRental)}>
                 <View style={styles.menuIconContainer}>
                   <IconComponent name="inspection" width={38} height={38} style={styles.menuIcon} />
                 </View>
@@ -452,27 +474,25 @@ const HomeScreen= () => {
 
             {/* Fila 3: Estados (Más juntas para cerrar la curva) */}
             <View style={[styles.menuRow, { gap: responsiveWidth(8) }]}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("InitialState")}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("InitialState", currentRental)}>
                 <View style={styles.menuIconContainer}>
                   <IconComponent name="home" width={38} height={38} style={styles.menuIcon} />
                 </View>
                 <Text style={styles.menuItemText}>Estado{"\n"}inicial</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity 
-                style={[styles.menuItem, !finalStateStatus.enabled && { opacity: 0.5 }]} 
+              <TouchableOpacity
+                style={[styles.menuItem, !finalStatus.enabled && { opacity: 0.5 }]}
                 onPress={() => {
-                  if (!selectedRental) return handleAction("FinalState") // Deja que handleAction maneje el error de selección
-                  
-                  if (finalStateStatus.enabled) {
-                    handleAction("FinalState")
+                  if (finalStatus.enabled) {
+                    handleAction("FinalState", currentRental)
                   } else {
-                    showAlert("Aún no disponible", `El registro de estado final se habilitará 5 días antes de finalizar el contrato.\n\nFaltan ${finalStateStatus.days} días.`)
+                    showAlert("Aún no disponible", `El estado final se habilita 5 días antes de finalizar el contrato.\n\nFaltan ${finalStatus.days} días.`)
                   }
                 }}
               >
-                <View style={[styles.menuIconContainer, !finalStateStatus.enabled && { backgroundColor: '#E5E7EB' }]}>
-                  <IconComponent name="form-icon" width={38} height={38} style={[styles.menuIcon, !finalStateStatus.enabled && { color: '#9CA3AF' }]} />
+                <View style={[styles.menuIconContainer, !finalStatus.enabled && { backgroundColor: '#E5E7EB' }]}>
+                  <IconComponent name="form-icon" width={38} height={38} style={[styles.menuIcon, !finalStatus.enabled && { color: '#9CA3AF' }]} />
                 </View>
                 <Text style={styles.menuItemText}>Estado{"\n"}final</Text>
               </TouchableOpacity>
@@ -549,7 +569,8 @@ const HomeScreen= () => {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 scrollEnabled={true}
-                
+                // Forzar re-render al cambiar selección
+                extraData={{ activeIndex, selectedRentalId: selectedRental?.id || selectedRental?.contract_id }}
                 // Configuración de Snapping (Carousel)
                 snapToInterval={SNAP_INTERVAL}
                 decelerationRate="fast"
@@ -558,7 +579,9 @@ const HomeScreen= () => {
                   gap: SPACING,
                   paddingBottom: responsiveHeight(1),
                 }}
-                
+                // Track ítem visible para sincronizar selección
+                onViewableItemsChanged={onViewableItemsChanged}
+                viewabilityConfig={viewabilityConfig}
                 // Evento de scroll para animación fluida de los dots
                 onScroll={Animated.event(
                   [{ nativeEvent: { contentOffset: { x: scrollX } } }],
@@ -699,48 +722,43 @@ const HomeScreen= () => {
 
           {/* Options Grid */}
           <View style={styles.optionsGrid}>
-            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("IncidenciasList")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("IncidenciasList", currentRental)}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFE3E3" }}>
                 <IconComponent name="calendar" width={33} height={33} />
               </View>
               <Text style={styles.optionTitle}>Incidencias</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("InitialState")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("InitialState", currentRental)}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#E6E8FF" }}>
                 <IconComponent name="home" width={32} height={32} />
               </View>
               <Text style={styles.optionTitle}>Estado inicial</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Peritajes")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Peritajes", currentRental)}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFF2CC" }}>
                 <IconComponent name="inspection" width={35} height={35} />
               </View>
               <Text style={styles.optionTitle}>Peritajes</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={[
-                styles.optionCard, 
-                !finalStateStatus.enabled && { backgroundColor: "#F9FAFB", borderColor: "#F3F4F6" }
-              ]} 
+            <TouchableOpacity
+              style={[styles.optionCard, !finalStatus.enabled && { backgroundColor: "#F9FAFB", borderColor: "#F3F4F6" }]}
               onPress={() => {
-                if (!selectedRental) return handleAction("FinalState")
-
-                if (finalStateStatus.enabled) {
-                  handleAction("FinalState")
+                if (finalStatus.enabled) {
+                  handleAction("FinalState", currentRental)
                 } else {
-                  showAlert("Aún no disponible", `El registro de estado final se habilitará 5 días antes de finalizar el contrato.\n\nFaltan ${finalStateStatus.days} días.`)
+                  showAlert("Aún no disponible", `El registro de estado final se habilitará 5 días antes de finalizar el contrato.\n\nFaltan ${finalStatus.days} días.`)
                 }
               }}
             >
-              <View style={{ ...styles.iconContainer, backgroundColor: finalStateStatus.enabled ? "#DCFCE7" : "#E5E7EB" }}>
-                <IconComponent name="form-icon" width={32} height={32} style={!finalStateStatus.enabled ? { color: "#9CA3AF" } : {}} />
+              <View style={{ ...styles.iconContainer, backgroundColor: finalStatus.enabled ? "#DCFCE7" : "#E5E7EB" }}>
+                <IconComponent name="form-icon" width={32} height={32} style={!finalStatus.enabled ? { color: "#9CA3AF" } : {}} />
               </View>
-              <Text style={[styles.optionTitle, !finalStateStatus.enabled && { color: "#9CA3AF" }]}>Estado Final</Text>
-              <Text style={[styles.optionSubtitle, !finalStateStatus.enabled && { color: "#9CA3AF", fontSize: responsiveFontSize(1.4) }]}>
-                {finalStateStatus.enabled ? "" : `En ${finalStateStatus.days} días`}
+              <Text style={[styles.optionTitle, !finalStatus.enabled && { color: "#9CA3AF" }]}>Estado Final</Text>
+              <Text style={[styles.optionSubtitle, !finalStatus.enabled && { color: "#9CA3AF", fontSize: responsiveFontSize(1.4) }]}>
+                {finalStatus.enabled ? "" : `En ${finalStatus.days} días`}
               </Text>
             </TouchableOpacity>
           </View>

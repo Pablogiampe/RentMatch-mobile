@@ -44,6 +44,7 @@ const PeritajeScreen = () => {
   const [agree, setAgree] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [selectedTime, setSelectedTime] = useState(null)
+  const [lastPeritaje, setLastPeritaje] = useState(null)
 
   // Estado para CustomAlert
   const [alertConfig, setAlertConfig] = useState({
@@ -73,6 +74,34 @@ const PeritajeScreen = () => {
       headerShown: false,
     })
   }, [])
+
+  useEffect(() => {
+    // cargar último peritaje del contrato actual
+    const fetchLastForContract = async () => {
+      if (!activeToken || !user?.id || !contractId) return
+      try {
+        const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-Expertise/GetExpertiseByTenant", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({ tenant_id: user.id }),
+        })
+        const data = await response.json()
+        if (response.ok && Array.isArray(data?.data)) {
+          const list = data.data
+            .filter(p => p.contract_id === contractId)
+            .map(p => ({ ...p, dateObj: new Date(p.date || p.created_at) }))
+            .sort((a, b) => b.dateObj - a.dateObj)
+          setLastPeritaje(list[0] || null)
+        }
+      } catch (e) {
+        // silencioso
+      }
+    }
+    fetchLastForContract()
+  }, [activeToken, user?.id, contractId])
 
   const getAvailableTimes = (dateString) => {
     const occupiedTimes = {
@@ -309,6 +338,26 @@ const PeritajeScreen = () => {
 
           <View style={styles.card}>
             <Text style={styles.propertyTitle}>{propertyTitle}</Text>
+
+            {/* NUEVO: último peritaje del contrato si existe */}
+            {lastPeritaje && (
+              <View style={{
+                backgroundColor: "#FFF4EC",
+                borderColor: "#FFD6BF",
+                borderWidth: 1,
+                borderRadius: 10,
+                padding: responsiveWidth(3),
+                marginBottom: responsiveHeight(1.5),
+              }}>
+                <Text style={{ fontFamily: 'Poppins_700Bold', fontSize: responsiveFontSize(1.7), color: "#1F2937" }}>
+                  Último peritaje
+                </Text>
+                <Text style={{ fontFamily: 'Poppins_400Regular', fontSize: responsiveFontSize(1.5), color: "#6B7280", marginTop: 4 }}>
+                  {new Date(lastPeritaje.date || lastPeritaje.created_at).toLocaleDateString("es-AR")}
+                  {lastPeritaje.reason ? ` · ${lastPeritaje.reason}` : ""}
+                </Text>
+              </View>
+            )}
 
             <Text style={styles.label}>Razón</Text>
             {/* input con estilo de contraseña */}

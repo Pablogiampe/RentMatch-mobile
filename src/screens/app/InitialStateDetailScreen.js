@@ -93,7 +93,7 @@ const PhotoCarousel = ({ images, getImageUrl, onImagePress }) => {
     <View style={styles.carouselSection}>
       <View style={styles.sectionHeader}>
         <IconComponent name="image" width={20} height={20} color={ORANGE} />
-        <Text style={styles.sectionTitle}>Fotos del Estado Inicial</Text>
+        <Text style={styles.sectionTitle}>Archivos adjuntos</Text>
       </View>
 
       <View style={styles.carouselContainer}>
