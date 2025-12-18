@@ -205,11 +205,21 @@ const InitialStateDetailScreen = ({ route, navigation }) => {
   const [initialIndex, setInitialIndex] = useState(0)
 
   const displayTitle = useMemo(() => {
-    const address = rentalData.address || ""
-    const neighborhood = rentalData.neighborhood || ""
-    const fullAddress = [address, neighborhood].filter(Boolean).join(", ")
+    const address = rentalData.address || rentalData.property || rentalData.property_address || ""
+    const neighborhood = rentalData.neighborhood || rentalData.barrio || ""
+    const city = rentalData.city || rentalData.localidad || ""
+    const fullAddress = [address, city].filter(Boolean).join(", ")
     return fullAddress || propertyTitle
-  }, [rentalData.address, rentalData.neighborhood, propertyTitle])
+  }, [
+    rentalData.address,
+    rentalData.property,
+    rentalData.property_address,
+    rentalData.neighborhood,
+    rentalData.barrio,
+    rentalData.city,
+    rentalData.localidad,
+    propertyTitle
+  ])
 
   const getImageUrl = useCallback((fileUrl) => {
     if (!fileUrl || typeof fileUrl !== "string") return null

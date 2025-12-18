@@ -57,7 +57,7 @@ const RentalHistoryScreen = () => {
       </View>
 
       <Text style={styles.cardAddress}>{item.address}</Text>
-      <Text style={styles.cardLocation}>{item.neighborhood}, {item.city}</Text>
+      <Text style={styles.cardLocation}> {item.city}</Text>
 
       <View style={styles.divider} />
 

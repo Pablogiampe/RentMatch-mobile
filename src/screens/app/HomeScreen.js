@@ -94,9 +94,9 @@ const HomeScreen= () => {
   const getProp = (r) => {
     return {
       type: r.property_type || "Propiedad",
-      address: r.address || "Sin dirección",
-      neighborhood: r.neighborhood || "Sin barrio",
-      city: r.city || "Sin ciudad",
+      address: r.address || r.property || r.property_address || "Sin dirección",
+      neighborhood: r.neighborhood || r.barrio || "",
+      city: r.city || r.localidad || "",
       rooms: r.rooms || 0,
       bathrooms: r.bathrooms || 0,
       price: r.rent_amount || 0,
@@ -595,7 +595,7 @@ const HomeScreen= () => {
                 renderItem={({ item, index }) => { // Agregamos index aquí
                   const p = getProp(item)
                   const title = `${capitalize(p.type)}`
-                  const ubicacion = [p.address, p.neighborhood].filter(Boolean).join(", ")
+                  const ubicacion = [p.address].filter(Boolean).join(", ")
                   
                   // Usamos el índice para determinar si es el seleccionado visualmente
                   const isSelected = index === activeIndex

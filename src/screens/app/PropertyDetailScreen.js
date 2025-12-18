@@ -97,7 +97,7 @@ const PropertyDetailScreen = () => {
             {/* Dirección como Título Principal */}
             <Text style={styles.addressTitle}>{address}</Text>
             <Text style={styles.citySubtitle}>
-              {[neighborhood, city].filter(Boolean).join(", ")}
+              {[ city].filter(Boolean).join(", ")}
             </Text>
 
             <View style={styles.typeBadge}>

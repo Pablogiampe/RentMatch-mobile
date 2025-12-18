@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, StatusBar } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import { useAuth } from "../../contexts/AuthContext"
+import { useRental } from "../../contexts/RentalContext"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } from "@expo-google-fonts/poppins"
 import { useRoute } from "@react-navigation/native" // + leer params
@@ -10,6 +11,7 @@ const ORANGE = "#FF5A1F"
 
 const PeritajesScreen = ({ navigation }) => {
   const { token, session, user } = useAuth()
+  const { rentals, activeRentals = [], rentalHistory = [], loadRentals } = useRental()
   const activeToken = token || session
   const [peritajes, setPeritajes] = useState([])
   const [loading, setLoading] = useState(true)
@@ -25,6 +27,13 @@ const PeritajesScreen = ({ navigation }) => {
     Poppins_600SemiBold,
     Poppins_700Bold,
   })
+
+  // asegurá que haya alquileres cargados
+  useEffect(() => {
+    if ((activeRentals.length === 0 && rentalHistory.length === 0) && user?.id) {
+      loadRentals?.()
+    }
+  }, [user?.id])
 
   useEffect(() => {
     if (activeToken && user?.id) {
@@ -57,19 +66,23 @@ const PeritajesScreen = ({ navigation }) => {
       // Extraer el array de datos (la respuesta es { success: true, data: [...] })
       const peritajesList = data.data || []
 
-      const mappedData = peritajesList.map(item => ({
-        id: item.id,
-        // Usamos el 'reason' como título principal ya que describe la solicitud
-        property: item.reason || "Solicitud de Peritaje",
-        // Al no tener dirección, mostramos el ID del contrato recortado
-        address: item.contract_id ? `Contrato: ...${item.property}` : "Sin contrato asociado",
-        date: item.date || item.created_at,
-        status: "pending", // El backend no devuelve estado aún, asumimos pendiente
-        type: "Solicitud",
-        inspector: "A asignar",
-        issues: null,
-        description: item.description
-      }))
+      // reemplazá el mappedData actual
+      const mappedData = peritajesList.map(item => {
+        const cId = item.contract_id || item.contractId || item.id
+        const info = rentalsIndex[cId] || {}
+        return {
+          id: item.id,
+          // título ahora será la dirección del contrato
+          address: info.displayAddress || "Dirección no disponible",
+          propertyType: info.propertyType || "Propiedad",
+          date: item.date || item.created_at,
+          status: "pending",
+          inspector: "A asignar",
+          description: item.description,
+          reason: item.reason,
+          contract_id: cId,
+        }
+      })
 
       setPeritajes(mappedData)
     } catch (error) {
@@ -114,6 +127,24 @@ const PeritajesScreen = ({ navigation }) => {
     navigation.navigate("DetallePeritaje", { peritajeId: peritaje.id })
   }
 
+  // mapa: contract_id -> { displayAddress, propertyType }
+  const rentalsIndex = useMemo(() => {
+    const all = [...activeRentals, ...rentalHistory]
+    const map = {}
+    all.forEach(r => {
+      const key = r.contract_id || r.id
+      const address = r.address || r.property || r.property_address || ""
+      const neighborhood = r.neighborhood || r.barrio || ""
+      const city = r.city || r.localidad || ""
+      const displayAddress = [address].filter(Boolean).join(", ")
+      const propertyType = r.property_type || "Propiedad"
+      if (key) {
+        map[key] = { displayAddress, propertyType }
+      }
+    })
+    return map
+  }, [activeRentals, rentalHistory])
+
   if (!fontsLoaded || loading) {
     return (
       <View style={styles.centerContainer}>
@@ -141,7 +172,7 @@ const PeritajesScreen = ({ navigation }) => {
 
       {/* Lista de Peritajes */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        <Text style={styles.sectionTitle}>Historial de Peritajes</Text>
+     
 
         {peritajes.length === 0 ? (
           <View style={styles.emptyState}>
@@ -164,18 +195,23 @@ const PeritajesScreen = ({ navigation }) => {
                 {/* Header Card */}
                 <View style={styles.cardHeader}>
                   <View style={styles.idContainer}>
-                                     <Text style={styles.peritajeId}>{peritaje.property}</Text>
-
+                    <Text style={styles.propertyName}>
+                      {peritaje.address}
+                    </Text>
+                    
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
-                    <Text style={[styles.statusText, { color: statusInfo.text }]}>
-                      {statusInfo.label}
-                    </Text>
+                    
+                    <Text style={[styles.statusText, { color: statusInfo.text }]}>{statusInfo.label}</Text>
                   </View>
+                  
                 </View>
-
-                {/* Property Info */}
-
+                <Text style={styles.propertyAddress} numberOfLines={1}>
+                      {peritaje.reason}
+                    </Text>
+<Text style={styles.propertyAddress} numberOfLines={1}>
+                      {peritaje.description}
+                    </Text>
                 <View style={styles.divider} />
 
                 {/* Details */}
@@ -348,7 +384,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Poppins_600SemiBold',
   },
   propertyName: {
-    fontSize: responsiveFontSize(2),
+    fontSize: responsiveFontSize(1.7),
     fontFamily: 'Poppins_700Bold',
     color: "#1F2937",
     marginBottom: 4,

@@ -47,7 +47,7 @@ const FinalStateScreen = ({ route, navigation }) => {
   
   const address = rentalData.address || ""
   const neighborhood = rentalData.neighborhood || ""
-  const fullAddress = [address, neighborhood].filter(Boolean).join(", ")
+  const fullAddress = [address].filter(Boolean).join(", ")
 
   const confirmLeaveIfDirty = (onProceed) => {
     if (!isDirty) {

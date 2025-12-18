@@ -4,7 +4,7 @@
     "slug": "rentmatch-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./RentMatch_mobile/assets/icono-app.png",
+    "icon": "./RentMatch_mobile/assets/icono-android.png",
     "backgroundColor": "#FF5A1F",
 
     "userInterfaceStyle": "light",
