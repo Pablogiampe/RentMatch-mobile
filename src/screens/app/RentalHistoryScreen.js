@@ -4,6 +4,7 @@ import { useNavigation } from "@react-navigation/native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useRental } from "../../contexts/RentalContext"
+import Home from "../../../RentMatch_mobile/assets/home" // ← Fondo personalizado
 
 const RentalHistoryScreen = () => {
   const navigation = useNavigation()
@@ -33,15 +34,25 @@ const RentalHistoryScreen = () => {
     }).format(value)
   }
 
+  // Traducciones de estados de la API
+  const STATUS_LABELS = {
+    pending_deposit: "Pendiente de depósito",
+    pending_signatures: "Firmas pendientes",
+    draft: "Borrador",
+    expired: "Vencido",
+  }
+
+  const translateStatus = (status) => STATUS_LABELS[status] || "Finalizado"
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardHeader}>
         <View style={styles.typeContainer}>
-          <IconComponent name="home" style={styles.cardIcon} />
+          <IconComponent name="rental-icon" width={25} height={25} style={styles.cardIcon} />
           <Text style={styles.cardType}>{item.property_type || "Propiedad"}</Text>
         </View>
         <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{item.status || "Finalizado"}</Text>
+          <Text style={styles.statusText}>{translateStatus(item.status)}</Text>
         </View>
       </View>
 
@@ -65,6 +76,8 @@ const RentalHistoryScreen = () => {
 
   return (
     <View style={styles.container}>
+      {/* Fondo decorativo */}
+      <Home style={{ position: "absolute", top: 0, left: 0 }} />
       <StatusBar barStyle="dark-content" backgroundColor="#fff" />
       
       <View style={styles.header}>
@@ -90,7 +103,7 @@ const RentalHistoryScreen = () => {
           />
         ) : (
           <View style={styles.emptyContainer}>
-            <IconComponent name="home" style={styles.emptyIcon} />
+            <IconComponent name="rental-icon" width={28} height={28} style={styles.emptyIcon} />
             <Text style={styles.emptyText}>No tienes contratos finalizados</Text>
             <Text style={styles.emptySubText}>Aquí aparecerán tus alquileres anteriores</Text>
           </View>
@@ -124,7 +137,7 @@ const styles = StyleSheet.create({
     color: "#1F2937",
   },
   headerTitle: {
-    fontSize: responsiveFontSize(2),
+    fontSize: responsiveFontSize(2.5),
     fontWeight: "600",
     color: "#1F2937",
     fontFamily: "Poppins_600SemiBold",
@@ -162,6 +175,9 @@ const styles = StyleSheet.create({
   cardIcon: {
     fontSize: 16,
     color: "#6B7280",
+    backgroundColor: "#b94dc720",
+    padding: 6,
+    borderRadius: 20,
   },
   cardType: {
     fontSize: responsiveFontSize(1.6),

@@ -64,7 +64,7 @@ const PropertyDetailScreen = () => {
 
       {/* Botón Volver Flotante */}
       <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-        <IconComponent color="grey" name="back-arrow" style={styles.backIcon} />
+        <IconComponent color="white" name="back-arrow" style={styles.backIcon} />
       </TouchableOpacity>
 
       <ScrollView 

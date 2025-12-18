@@ -9,11 +9,13 @@ import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } fr
 import { useNavigation } from "@react-navigation/native"
 import CustomAlert from "../../components/CustomAlert"
 
+const ORANGE = "#FF5A1F"
+
 // Constantes para el carrusel
-const CARD_WIDTH = responsiveWidth(88)
-const SPACING = responsiveWidth(4)
+const CARD_WIDTH = responsiveWidth(85)
+const SPACING = responsiveWidth(3)
 const SNAP_INTERVAL = CARD_WIDTH + SPACING
-const SIDE_SPACER = (responsiveWidth(100) - CARD_WIDTH) / 2
+const INSET_X = (responsiveWidth(100) - CARD_WIDTH) / 2
   
 const HomeScreen= () => {
   const { user, signOut, token, session } = useAuth()
@@ -321,6 +323,10 @@ const HomeScreen= () => {
         // Si ya existe, vamos al detalle
         navigation.navigate("InitialStateDetail", {
           initialState: existingState,
+                    rentalData: selectedRental,
+                              title: title,
+
+
         })
       } else {
         // ✅ ESTO FALTABA: Si no existe, navegar al formulario de creación
@@ -448,7 +454,7 @@ const HomeScreen= () => {
             <View style={[styles.menuRow, { gap: responsiveWidth(8) }]}>
               <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("InitialState")}>
                 <View style={styles.menuIconContainer}>
-                  <IconComponent name="form-icon" width={38} height={38} style={styles.menuIcon} />
+                  <IconComponent name="home" width={38} height={38} style={styles.menuIcon} />
                 </View>
                 <Text style={styles.menuItemText}>Estado{"\n"}inicial</Text>
               </TouchableOpacity>
@@ -466,7 +472,7 @@ const HomeScreen= () => {
                 }}
               >
                 <View style={[styles.menuIconContainer, !finalStateStatus.enabled && { backgroundColor: '#E5E7EB' }]}>
-                  <IconComponent name="home" width={38} height={38} style={[styles.menuIcon, !finalStateStatus.enabled && { color: '#9CA3AF' }]} />
+                  <IconComponent name="form-icon" width={38} height={38} style={[styles.menuIcon, !finalStateStatus.enabled && { color: '#9CA3AF' }]} />
                 </View>
                 <Text style={styles.menuItemText}>Estado{"\n"}final</Text>
               </TouchableOpacity>
@@ -702,7 +708,7 @@ const HomeScreen= () => {
 
             <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("InitialState")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#E6E8FF" }}>
-                <IconComponent name="home" width={38} height={38} />
+                <IconComponent name="home" width={32} height={32} />
               </View>
               <Text style={styles.optionTitle}>Estado inicial</Text>
             </TouchableOpacity>
@@ -753,7 +759,7 @@ const HomeScreen= () => {
               }} 
             >
               <View style={styles.secondaryButtonIcon}>
-                <IconComponent name="home" style={{ color: '#6B7280', fontSize: 20 }} />
+                <IconComponent name="rental-icon" style={{ color: '#6B7280', fontSize: 20 }} />
               </View>
               <View style={styles.secondaryButtonContent}>
                 <Text style={styles.secondaryButtonTitle}>Historial de Alquileres</Text>
@@ -1163,7 +1169,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#b94dc720',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: responsiveWidth(3),
@@ -1258,6 +1264,37 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(1.6),
     color: '#999',
     fontFamily: 'Poppins_400Regular',
+  },
+  // Modal Styles
+  modalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 10,
+    padding: 10,
+    backgroundColor: ORANGE,
+    borderRadius: 20,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+  },
+  fullScreenImageContainer: {
+    width: "100%",
+    height: "100%",
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  fullScreenImage: {
+    width: "100%",
+    height: "80%",
   },
 })
 export default HomeScreen

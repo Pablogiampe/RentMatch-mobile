@@ -41,18 +41,21 @@ const PeritajesScreen = ({ navigation }) => {
 
       const data = await response.json()
       
-      // ✅ FIX: Validar que sea un array antes de mapear
-      if (!Array.isArray(peritajesList)) {
-        console.log("La respuesta no es un array:", peritajesList);
-        setPeritajes([]);
-        return;
+      if (!response.ok) {
+        throw new Error(data.message || "Error al obtener peritajes")
       }
 
+      console.log("📦 Peritajes recibidos:", JSON.stringify(data, null, 2))
+
+      // Extraer el array de datos (la respuesta es { success: true, data: [...] })
+      const peritajesList = data.data || []
+
       const mappedData = peritajesList.map(item => ({
-        id: item?.id || Math.random(), // Fallback ID
-        property: item?.reason || "Solicitud de Peritaje",
+        id: item.id,
+        // Usamos el 'reason' como título principal ya que describe la solicitud
+        property: item.reason || "Solicitud de Peritaje",
         // Al no tener dirección, mostramos el ID del contrato recortado
-        address: item.contract_id ? `Contrato: ...${item.contract_id.slice(-8)}` : "Sin contrato asociado",
+        address: item.contract_id ? `Contrato: ...${item.property}` : "Sin contrato asociado",
         date: item.date || item.created_at,
         status: "pending", // El backend no devuelve estado aún, asumimos pendiente
         type: "Solicitud",
@@ -89,7 +92,8 @@ const PeritajesScreen = ({ navigation }) => {
   }
 
   const handlePeritajePress = (peritaje) => {
-  
+    // Navegar a detalle del peritaje
+    navigation.navigate("DetallePeritaje", { peritajeId: peritaje.id })
   }
 
   if (!fontsLoaded || loading) {
@@ -115,24 +119,7 @@ const PeritajesScreen = ({ navigation }) => {
       </View>
 
       {/* Stats Cards */}
-      <View style={styles.statsRow}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{peritajes.length}</Text>
-          <Text style={styles.statLabel}>Total</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {peritajes.filter(p => p.status === "completed").length}
-          </Text>
-          <Text style={styles.statLabel}>Completados</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {peritajes.filter(p => p.status === "scheduled").length}
-          </Text>
-          <Text style={styles.statLabel}>Programados</Text>
-        </View>
-      </View>
+     
 
       {/* Lista de Peritajes */}
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
@@ -140,7 +127,7 @@ const PeritajesScreen = ({ navigation }) => {
 
         {peritajes.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyIcon}>📋</Text>
+             <IconComponent name="inspection" width={70} height={70} style={styles.cardIcon} />
             <Text style={styles.emptyTitle}>No tenés peritajes aún</Text>
             <Text style={styles.emptyText}>
               Solicitá tu primer peritaje usando el botón de abajo
@@ -159,7 +146,8 @@ const PeritajesScreen = ({ navigation }) => {
                 {/* Header Card */}
                 <View style={styles.cardHeader}>
                   <View style={styles.idContainer}>
-                     <Text style={styles.peritajeId} numberOfLines={1}>ID: {peritaje.id.slice(0, 8)}...</Text>
+                                     <Text style={styles.peritajeId}>{peritaje.property}</Text>
+
                   </View>
                   <View style={[styles.statusBadge, { backgroundColor: statusInfo.bg }]}>
                     <Text style={[styles.statusText, { color: statusInfo.text }]}>
@@ -169,8 +157,6 @@ const PeritajesScreen = ({ navigation }) => {
                 </View>
 
                 {/* Property Info */}
-                <Text style={styles.propertyName}>{peritaje.property}</Text>
-                <Text style={styles.propertyAddress}>📍 {peritaje.address}</Text>
 
                 <View style={styles.divider} />
 
@@ -296,7 +282,7 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontSize: responsiveFontSize(2),
     fontFamily: 'Poppins_700Bold',
-    color: "#1F2937",
+    color: "#b4a912ff",
     marginBottom: responsiveHeight(1),
   },
   emptyText: {
@@ -326,15 +312,13 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   idContainer: {
-    backgroundColor: "#F9FAFB",
-    paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
   },
   peritajeId: {
-    fontSize: responsiveFontSize(1.4),
-    fontFamily: 'Poppins_600SemiBold',
-    color: "#6B7280",
+      fontSize: responsiveFontSize(2),
+    fontFamily: 'Poppins_700Bold',
+    color: "#1F2937",
   },
   statusBadge: {
     paddingHorizontal: 12,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState,useRef } from "react"
+import { useState, useRef } from "react"
 import {
   View,
   Text,
@@ -20,7 +20,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
   const [email, setEmail] = useState("")
   const [loading, setLoading] = useState(false)
   const { forgotPassword } = useAuth()
-const emailRef = useRef(null);
+  const emailRef = useRef(null);
 
   const handleForgotPassword = async () => {
     if (!email) {
@@ -52,9 +52,9 @@ const emailRef = useRef(null);
   }
 
   return (
-    <KeyboardAvoidingView  style={styles.container}>
-     <Recuperacion style={{ position: "absolute", width: "100%", height: "100%" }} />
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+    <KeyboardAvoidingView style={styles.container}>
+      <Recuperacion style={{ position: "absolute", width: "100%", height: "100%" }} />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.content}>
           <Text style={styles.title}>Recuperar tu contraseña</Text>
           <Text style={styles.subtitle}>Ingresa tu correo electronico para que te enviemos un codigo</Text>
@@ -71,14 +71,16 @@ const emailRef = useRef(null);
                 editable={!loading}
                 multiline={false}
                 scrollEnabled={true}
+
+                placeholderTextColor="#5c5858ff"
                 textContentType="emailAddress"
-                  // returnKeyType="done"
-                  // onSubmitEditing={}
-                  ref={emailRef}
+                // returnKeyType="done"
+                // onSubmitEditing={}
+                ref={emailRef}
               />
             </View>
-          
-         
+
+
 
             <TouchableOpacity
               style={[styles.button, loading && styles.buttonDisabled]}
@@ -86,11 +88,11 @@ const emailRef = useRef(null);
             >
               {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Continuar</Text>}
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               onPress={() => navigation.navigate("Login")}
             >
-              {loading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.buttonText,{color: "#FF5A1F" ,fontSize:responsiveFontSize(2),margin:"auto"}]}>Volver</Text>}
+              {loading ? <ActivityIndicator color="#fff" /> : <Text style={[styles.buttonText, { color: "#FF5A1F", fontSize: responsiveFontSize(2), margin: "auto" }]}>Volver</Text>}
             </TouchableOpacity>
 
 
@@ -108,7 +110,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    
+
   },
   content: {
     flex: 1,
@@ -133,12 +135,12 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "rgba(105, 138, 238, 0.5)", 
+    borderColor: "rgba(105, 138, 238, 0.5)",
     borderRadius: 8,
-       shadowColor: "#8e8a8aff",
+    shadowColor: "#8e8a8aff",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    
+
     shadowRadius: 4,
     elevation: 3,
   },
@@ -148,11 +150,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderRadius: 8,
     backgroundColor: "#F1F4FF",
-    alignItems: 'center', 
-       shadowColor: "#8e8a8aff",
+    alignItems: 'center',
+    shadowColor: "#8e8a8aff",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    
+
     shadowRadius: 4,
     elevation: 3,
   },
@@ -168,8 +170,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,
-        fontWeight: "600",
-      fontSize: responsiveFontSize(1.8),
+    fontWeight: "600",
+    fontSize: responsiveFontSize(1.8),
     backgroundColor: "#F1F4FF",
     borderWidth: 1,
     borderRadius: 8,
@@ -187,8 +189,8 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: responsiveFontSize(1.8),
     textAlignVertical: 'center',
-    includeFontPadding: false, 
-    overflow: 'hidden', 
+    includeFontPadding: false,
+    overflow: 'hidden',
   },
   passwordButton: {
     justifyContent: "flex-end",

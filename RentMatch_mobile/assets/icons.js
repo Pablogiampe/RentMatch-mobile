@@ -24,7 +24,8 @@ const IconComponent = ({
         return (
          <Svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 32 32"><Path fill="#1e7e39" d="M16 2c-1.258 0-2.152.89-2.594 2H5v25h22V4h-8.406C18.152 2.89 17.258 2 16 2m0 2c.555 0 1 .445 1 1v1h3v2h-8V6h3V5c0-.555.445-1 1-1M7 6h3v4h12V6h3v21H7zm14.281 7.281L15 19.562l-3.281-3.28l-1.438 1.437l4 4l.719.687l.719-.687l7-7z"/></Svg>
         );
-
+case "rental-icon":
+        return (<Svg xmlns="http://www.w3.org/2000/svg" width={width} height={height} viewBox="0 0 15 15"><Path fill="#6632f9" d="M11.5 1H10c-.74 0-1.38.4-1.72 1H3.5l-1 1l1 1l1-1l1 1l1-1l1 1h.78c.34.6.98 1 1.72 1h1.5c.28 0 .5-.22.5-.5v-3c0-.28-.22-.5-.5-.5M11 3.5c0 .28-.22.5-.5.5s-.5-.22-.5-.5v-1c0-.28.22-.5.5-.5s.5.22.5.5zM12 14V8H3v6H1.5V6.5h12V14zM4.5 9h6c.28 0 .5.22.5.5s-.22.5-.5.5h-6c-.28 0-.5-.22-.5-.5s.22-.5.5-.5m0 4h6c.28 0 .5.22.5.5s-.22.5-.5.5h-6c-.28 0-.5-.22-.5-.5s.22-.5.5-.5m0-2h6c.28 0 .5.22.5.5s-.22.5-.5.5h-6c-.28 0-.5-.22-.5-.5s.22-.5.5-.5"/></Svg>);
       case "arrow-down":
         return (
           <Svg

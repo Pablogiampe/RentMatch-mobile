@@ -25,8 +25,8 @@ import { useFonts, Poppins_400Regular, Poppins_600SemiBold, Poppins_700Bold } fr
 const LoginScreen = ({ navigation }) => {
   // const [email, setEmail] = useState("daviddf2497@gmail.com")
   // const [password, setPassword] = useState("123123123")
-    const [email, setEmail] = useState("pablo.giampetruzzi@davinci.edu.ar")
-  const [password, setPassword] = useState("Pablin100")
+    const [email, setEmail] = useState("daviddf2497@gmail.com")
+  const [password, setPassword] = useState("123123123")
   const [showPassword, setShowPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const { signIn, setSession, setUser } = useAuth()
@@ -167,6 +167,7 @@ const LoginScreen = ({ navigation }) => {
                 keyboardType="email-address"
                 editable={!loading}
                 multiline={false}
+                                placeholderTextColor="#5c5858ff"
                 scrollEnabled={true}
                 textContentType="emailAddress"
                 // ✅ Nuevas props para el botón del teclado
@@ -185,6 +186,7 @@ const LoginScreen = ({ navigation }) => {
                 editable={!loading}
                 multiline={false}
                 scrollEnabled={true}
+                placeholderTextColor="#5c5858ff"
                 textContentType="password"
                 // ✅ Nuevas props para el botón del teclado
                 returnKeyType="done"
@@ -314,7 +316,7 @@ const styles = StyleSheet.create({
   input: {
     height: 48, // Altura fija
     borderWidth: 1,
-    color: "#5c5858ff",
+    color: "#3d3a3aff",
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 12,

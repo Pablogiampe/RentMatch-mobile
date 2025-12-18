@@ -1,13 +1,14 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from "react-native"
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import * as ImagePicker from "expo-image-picker"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import IncidenciasSvg from "../../../RentMatch_mobile/assets/IncidenciasSvg"
 import { useAuth } from "../../contexts/AuthContext"
 import CustomAlert from "../../components/CustomAlert"
+import Home from "../../../RentMatch_mobile/assets/home" // <- fondo similar al home
 
 const ORANGE = "#FF5A1F"
 
@@ -178,11 +179,9 @@ const IncidenciasScreen = ({ route, navigation }) => {
       style={{ flex: 1 }} 
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={{ flex: 1, backgroundColor: "#fff" }}>
-        {/* Fondo SVG */}
-        <View style={styles.backgroundSvg}>
-          <IncidenciasSvg />
-        </View>
+      <View style={{ flex: 1, backgroundColor: "#FAFAFA" }}>
+        {/* Fondo similar al Home */}
+        <Home style={styles.backgroundImage} />
 
         <ScrollView 
           contentContainerStyle={styles.scrollContent}
@@ -191,7 +190,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
         >
           {/* Header */}
           <View style={styles.topBar}>
-            <TouchableOpacity style={styles.back} onPress={handleBack}>
+            <TouchableOpacity style={styles.back} onPress={handleBack} activeOpacity={0.8}>
               <IconComponent name="back-arrow" />
             </TouchableOpacity>
             <Text style={styles.topTitle}>Reportar Incidencia</Text>
@@ -206,7 +205,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Ej: Cañería rota"
+              
                 placeholderTextColor="#9BA3C7"
                 value={title}
                 onChangeText={setTitle}
@@ -243,6 +242,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
                       active && { backgroundColor: opt.color, borderColor: opt.color }
                     ]}
                     onPress={() => setUrgency(opt.key)}
+                    activeOpacity={0.9}
                   >
                     <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
                       {opt.label}
@@ -254,7 +254,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
 
             {/* Imagenes */}
             <Text style={styles.label}>Evidencia fotográfica</Text>
-            <TouchableOpacity style={styles.uploadBox} onPress={handlePickImage}>
+            <TouchableOpacity style={styles.uploadBox} onPress={handlePickImage} activeOpacity={0.9}>
               <View style={styles.uploadIconBox}>
                 <IconComponent name="upload" style={{ color: ORANGE, fontSize: 24 }} />
               </View>
@@ -286,6 +286,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
               style={[styles.submitBtn, submitting && { opacity: 0.7 }]} 
               onPress={handleSubmit}
               disabled={submitting}
+              activeOpacity={0.9}
             >
               {submitting ? (
                 <ActivityIndicator color="#fff" />
@@ -308,12 +309,12 @@ const IncidenciasScreen = ({ route, navigation }) => {
 }
 
 const styles = StyleSheet.create({
-  backgroundSvg: {
+  backgroundImage: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    zIndex: -1,
+    bottom: 0,
   },
   scrollContent: {
     padding: responsiveWidth(4),
@@ -324,13 +325,16 @@ const styles = StyleSheet.create({
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: responsiveHeight(1),
-    marginTop: responsiveHeight(4),
+    justifyContent: "space-between",
+    marginTop: responsiveHeight(5),
+    marginBottom: responsiveHeight(1.5),
+    paddingHorizontal: responsiveWidth(1),
+    backgroundColor: "transparent",
   },
   back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -341,21 +345,29 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: "#0B0B0C",
     fontFamily: "Poppins_600SemiBold",
+    letterSpacing: -0.2,
   },
-  topSpacer: { width: 36 },
-  
+  topSpacer: { width: 40 },
+
   card: {
     width: "100%",
-    backgroundColor: "transparent",
-    borderRadius: 10,
-    padding: responsiveWidth(2),
+    backgroundColor: "#FFFFFF",
+    borderRadius: 24,
+    padding: responsiveWidth(5),
+    borderWidth: 1,
+    borderColor: "#E8EAF0",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.1,
+    shadowRadius: 16,
+    elevation: 6,
   },
   propertyTitle: {
     textAlign: "center",
-    fontSize: responsiveFontSize(2.4),
+    fontSize: responsiveFontSize(2.2),
     fontWeight: "700",
-    marginBottom: responsiveHeight(3),
-    color: "#111213",
+    marginBottom: responsiveHeight(2.5),
+    color: "#1F2937",
     fontFamily: "Poppins_700Bold",
   },
   label: {
@@ -372,14 +384,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderWidth: 1,
     borderColor: "rgba(105, 138, 238, 0.5)",
-    borderRadius: 8,
+    borderRadius: 12,
     backgroundColor: "#F1F4FF",
     alignItems: "center",
     shadowColor: "#8e8a8aff",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 2,
     marginBottom: responsiveHeight(1),
   },
   input: {
@@ -409,17 +421,23 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFF4EC",
     borderWidth: 1,
     borderColor: "#FFD6BF",
-    borderRadius: 12,
+    borderRadius: 16,
     padding: responsiveWidth(4),
     marginBottom: responsiveHeight(2),
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   uploadIconBox: {
     width: 40,
     height: 40,
-    borderRadius: 20, // Redondo
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginRight: responsiveWidth(3),
+    backgroundColor: "#FFE9DB",
   },
   uploadTitle: {
     fontSize: responsiveFontSize(1.8),
@@ -435,7 +453,7 @@ const styles = StyleSheet.create({
 
   gallery: { flexDirection: "row", flexWrap: "wrap", gap: responsiveWidth(2), marginBottom: responsiveHeight(2) },
   thumbWrap: { position: "relative" },
-  thumb: { width: responsiveWidth(26), height: responsiveWidth(26), borderRadius: 8 },
+  thumb: { width: responsiveWidth(26), height: responsiveWidth(26), borderRadius: 10, borderWidth: 2, borderColor: "#FFE3D2" },
   removePill: {
     position: "absolute",
     top: -6,

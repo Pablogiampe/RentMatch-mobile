@@ -244,7 +244,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
             <View style={styles.inputContainer}>
               <TextInput
                 style={styles.input}
-                placeholder="Ej: Cañería rota"
+                placeholder="Ej: Humedad en las paredes"
                 placeholderTextColor="#9BA3C7"
                 value={title}
                 onChangeText={setTitle}
@@ -256,7 +256,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
             <View style={[styles.inputContainer, styles.textAreaContainer]}>
               <TextInput
                 style={[styles.input, styles.textArea]}
-                placeholder="Describí el problema con detalle..."
+                placeholder="Describí el problema en detalle..."
                 placeholderTextColor="#9BA3C7"
                 value={description}
                 onChangeText={setDescription}
