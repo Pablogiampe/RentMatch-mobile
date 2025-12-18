@@ -9,6 +9,7 @@ import IncidenciasScreen from "../screens/app/IncidenciasScreen"
 import ProfileScreen from "../screens/app/ProfileScreen"
 import PeritajesScreen from "../screens/app/PeritajesScreen"
 import PropertyDetailScreen from "../screens/app/PropertyDetailScreen"
+import IncidenciasListScreen from "../screens/app/IncidenciasListScreen"
   ;
 const Stack = createNativeStackNavigator()
 export default function AppStack() {
@@ -29,6 +30,7 @@ export default function AppStack() {
         <Stack.Screen name="FinalState" component={FinalStateScreen} />
         <Stack.Screen name="InitialState" component={InitialStateScreen} />
         <Stack.Screen name="Incidencias" component={IncidenciasScreen} />
+        <Stack.Screen name="IncidenciasList" component={IncidenciasListScreen} />
         <Stack.Screen name="Peritajes" component={PeritajesScreen} />
 
         <Stack.Screen name="Profile" component={ProfileScreen} />

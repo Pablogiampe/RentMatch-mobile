@@ -8,6 +8,7 @@ import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import IncidenciasSvg from "../../../RentMatch_mobile/assets/IncidenciasSvg"
 import { useAuth } from "../../contexts/AuthContext"
 import CustomAlert from "../../components/CustomAlert"
+import { supabase } from "../../services/supabase"
 
 const ORANGE = "#FF5A1F"
 
@@ -93,6 +94,43 @@ const IncidenciasScreen = ({ route, navigation }) => {
     return unsub
   }, [navigation, isDirty])
 
+  // --- FUNCIÓN PARA SUBIR A SUPABASE (VERSIÓN ARRAYBUFFER) ---
+  const uploadImageToSupabase = async (uri) => {
+    try {
+      // 1. Usamos fetch para obtener el archivo como ArrayBuffer
+      // Esto evita el uso de 'Blob' que suele fallar en RN/Hermes
+      const response = await fetch(uri)
+      const arrayBuffer = await response.arrayBuffer()
+      
+      // 2. Generar nombre y ruta
+      const filename = uri.split('/').pop()
+      const ext = filename.split('.').pop() || 'jpg'
+      // Ruta: incidents/nombre_archivo
+      const path = `incidents/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`
+
+      // 3. Subir al bucket 'mobile' usando ArrayBuffer
+      // Es importante especificar el contentType
+      const { error } = await supabase.storage
+        .from('mobile') 
+        .upload(path, arrayBuffer, {
+          contentType: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
+          upsert: false
+        })
+
+      if (error) throw error
+
+      // 4. Obtener URL pública
+      const { data } = supabase.storage
+        .from('mobile')
+        .getPublicUrl(path)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error('Error subiendo imagen a Supabase:', error)
+      return null
+    }
+  }
+
   const handleSubmit = async () => {
     if (!contractId) {
       return showAlert("Error", "No se encontró el contrato asociado.")
@@ -110,32 +148,34 @@ const IncidenciasScreen = ({ route, navigation }) => {
     }
 
     try {
+      // 1. Subir imágenes a Supabase primero
+      let uploadedUrls = []
+      if (images.length > 0) {
+        const uploadPromises = images.map(img => uploadImageToSupabase(img.uri))
+        const results = await Promise.all(uploadPromises)
+        uploadedUrls = results.filter(url => url !== null)
+      }
+
+      // 2. Preparar descripción concatenando las URLs
+      let finalDescription = description
+      if (uploadedUrls.length > 0) {
+        finalDescription += `\n\n[FOTOS_ADJUNTAS]\n${uploadedUrls.join('\n')}`
+      }
+
       const formData = new FormData()
       formData.append("contract_id", String(contractId))
       formData.append("razon", title)
-      formData.append("descripcion", description)
+      formData.append("descripcion", finalDescription)
       
       if (urgencyMap[urgency]) {
         formData.append("urgency", urgencyMap[urgency])
       }
-
-      images.forEach((img) => {
-        const filename = img.uri.split('/').pop()
-        const match = /\.(\w+)$/.exec(filename)
-        const type = match ? `image/${match[1]}` : `image/jpeg`
-        
-        formData.append('images', {
-          uri: img.uri,
-          name: filename,
-          type,
-        })
-      })
       
       console.log("🚀 Enviando incidencia...", {
         contract_id: contractId,
         razon: title,
         urgency: urgencyMap[urgency] || "Default",
-        imagesCount: images.length
+        imagesCount: uploadedUrls.length
       })
 
       const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-reporter/incidents", {
@@ -153,7 +193,7 @@ const IncidenciasScreen = ({ route, navigation }) => {
         throw new Error(data.message || "No se pudo enviar el reporte.")
       }
 
-      // Limpiar formulario antes de mostrar alerta de éxito
+      // Limpiar formulario
       setTitle("")
       setDescription("")
       setUrgency(null)

@@ -1,41 +1,20 @@
-import React from "react"
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, StatusBar } from "react-native"
+import React, { useEffect } from "react"
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, StatusBar, ActivityIndicator } from "react-native"
 import { useNavigation } from "@react-navigation/native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
+import { useRental } from "../../contexts/RentalContext"
 
 const RentalHistoryScreen = () => {
   const navigation = useNavigation()
+  const { rentalHistory, loading, loadRentals } = useRental()
 
-  // DATOS DE PRUEBA (MOCK)
-  const history = [
-    {
-      id: "1",
-      property_type: "Departamento",
-      address: "Av. Libertador 2400, 4B",
-      neighborhood: "Palermo",
-      city: "CABA",
-      start_date: "2022-03-01",
-      end_date: "2024-02-28",
-      rent_amount: 450000,
-      currency: "ARS",
-      status: "Finalizado"
-    },
-    {
-      id: "2",
-      property_type: "Casa",
-      address: "Calle Falsa 123",
-      neighborhood: "Belgrano",
-      city: "CABA",
-      start_date: "2020-01-15",
-      end_date: "2022-01-15",
-      rent_amount: 850,
-      currency: "USD",
-      status: "Finalizado"
-    }
-  ] 
+  useEffect(() => {
+    loadRentals()
+  }, [])
 
   const formatDate = (dateString) => {
+    if (!dateString) return "-"
     return new Date(dateString).toLocaleDateString("es-AR", {
       day: '2-digit',
       month: '2-digit',
@@ -44,9 +23,10 @@ const RentalHistoryScreen = () => {
   }
 
   const formatCurrency = (value, currency) => {
+    if (!value) return "-"
     return new Intl.NumberFormat("es-AR", { 
       style: "currency", 
-      currency, 
+      currency: currency || "ARS", 
       maximumFractionDigits: 0 
     }).format(value)
   }
@@ -56,10 +36,10 @@ const RentalHistoryScreen = () => {
       <View style={styles.cardHeader}>
         <View style={styles.typeContainer}>
           <IconComponent name="home" style={styles.cardIcon} />
-          <Text style={styles.cardType}>{item.property_type}</Text>
+          <Text style={styles.cardType}>{item.property_type || "Propiedad"}</Text>
         </View>
         <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>{item.status}</Text>
+          <Text style={styles.statusText}>{item.status || "Finalizado"}</Text>
         </View>
       </View>
 
@@ -94,11 +74,15 @@ const RentalHistoryScreen = () => {
       </View>
 
       <View style={styles.content}>
-        {history.length > 0 ? (
+        {loading ? (
+          <View style={styles.emptyContainer}>
+            <ActivityIndicator size="large" color="#FF5A1F" />
+          </View>
+        ) : rentalHistory && rentalHistory.length > 0 ? (
           <FlatList 
-            data={history}
+            data={rentalHistory}
             renderItem={renderItem}
-            keyExtractor={item => item.id}
+            keyExtractor={item => item.id?.toString() || Math.random().toString()}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
           />

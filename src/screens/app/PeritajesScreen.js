@@ -88,12 +88,11 @@ const PeritajesScreen = ({ navigation }) => {
 
   const handleNewPeritaje = () => {
     // Navegar a formulario de nuevo peritaje
-    navigation.navigate("NuevoPeritaje")
+    navigation.navigate("Peritaje")
   }
 
   const handlePeritajePress = (peritaje) => {
-    // Navegar a detalle del peritaje
-    navigation.navigate("DetallePeritaje", { peritajeId: peritaje.id })
+  
   }
 
   if (!fontsLoaded || loading) {

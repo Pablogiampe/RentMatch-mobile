@@ -371,14 +371,14 @@ const HomeScreen= () => {
 
             {/* Fila 2: Acciones (Separadas para la parte ancha) */}
             <View style={[styles.menuRow, { gap: responsiveWidth(25) }]}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Incidencias")}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("IncidenciasList")}>
                 <View style={styles.menuIconContainer}>
                   <IconComponent name="calendar" style={styles.menuIcon} />
                 </View>
                 <Text style={styles.menuItemText}>Incidencias</Text>
               </TouchableOpacity>
 
-              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Peritaje")}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Peritajes")}>
                 <View style={styles.menuIconContainer}>
                   <IconComponent name="inspection" style={styles.menuIcon} />
                 </View>
@@ -439,9 +439,10 @@ const HomeScreen= () => {
           ]}
         >
           <TouchableOpacity style={styles.arrowButton} onPress={toggleExpand} activeOpacity={0.9}>
-            <Animated.Text style={[styles.arrowIcon, { transform: [{ rotate: arrowRotate }] }]}>
+            {/* CAMBIO: Usar Animated.View en lugar de Animated.Text para rotar SVGs correctamente */}
+            <Animated.View style={[styles.arrowIcon, { transform: [{ rotate: arrowRotate }] }]}>
               <IconComponent name="arrow-down" />
-            </Animated.Text>
+            </Animated.View>
           </TouchableOpacity>
         </Animated.View>
       )}
@@ -634,7 +635,7 @@ const HomeScreen= () => {
 
           {/* Options Grid */}
           <View style={styles.optionsGrid}>
-            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Incidencias")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("IncidenciasList")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFE3E3" }}>
                 <IconComponent name="calendar" />
               </View>
@@ -648,7 +649,7 @@ const HomeScreen= () => {
               <Text style={styles.optionTitle}>Estado inicial</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Peritaje")}>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Peritajes")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFF2CC" }}>
                 <IconComponent name="inspection" />
               </View>
@@ -703,26 +704,7 @@ const HomeScreen= () => {
               <IconComponent name="arrow-right" style={{ color: '#9CA3AF', fontSize: 16 }} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
-              style={styles.secondaryButton}
-              onPress={() => {
-                const params = selectedRental ? {
-                  contract_id: selectedRental.contract_id || selectedRental.id,
-                  title: selectedRental.property_type ? `${capitalize(selectedRental.property_type)}` : "Propiedad",
-                  rentalData: selectedRental
-                } : {}
-                navigation.navigate('Peritajes', params)
-              }}
-            >
-              <View style={styles.secondaryButtonIcon}>
-                <IconComponent name="inspection" style={{ color: '#6B7280', fontSize: 20 }} />
-              </View>
-              <View style={styles.secondaryButtonContent}>
-                <Text style={styles.secondaryButtonTitle}>Mis Peritajes</Text>
-                <Text style={styles.secondaryButtonSubtitle}>Consultar estado de solicitudes</Text>
-              </View>
-              <IconComponent name="arrow-right" style={{ color: '#9CA3AF', fontSize: 16 }} />
-            </TouchableOpacity>
+       
           </View>
 
         </View>
