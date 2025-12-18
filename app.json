@@ -21,12 +21,12 @@
             "icon": "./RentMatch_mobile/assets/icono-android.png",
       "adaptiveIcon": {
         "foregroundImage": "./RentMatch_mobile/assets/icono-android.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#ff6900"
       },
        "splash": {
         "image": "./RentMatch_mobile/assets/RENTMATCH.png",
         "resizeMode": "contain",
-        "backgroundColor": "#006f7a"
+        "backgroundColor": "#ff6900"
       },
       "package": "com.rentmatchmobile"
     },
