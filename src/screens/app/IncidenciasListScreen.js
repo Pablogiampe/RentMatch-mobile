@@ -130,71 +130,55 @@ const IncidenciasListScreen = ({ route, navigation }) => {
     })
   }
 
+  // ✅ FIX: Función getImageUrl blindada contra nulos y tipos incorrectos
   const getImageUrl = (fileUrl) => {
-    if (!fileUrl) return null
-    if (fileUrl.startsWith('http')) return fileUrl
-    const cleanPath = fileUrl.replace(/\\/g, '/')
-    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`
-    const path = cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath
-    return `${baseUrl}${path}`
+    if (!fileUrl || typeof fileUrl !== 'string') return null; 
+    
+    if (fileUrl.startsWith('http')) return fileUrl;
+    
+    const cleanPath = fileUrl.replace(/\\/g, '/');
+    const baseUrl = BASE_URL.endsWith('/') ? BASE_URL : `${BASE_URL}/`;
+    const path = cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath;
+    
+    return `${baseUrl}${path}`;
   }
 
-  const handleNewIncident = () => {
-    navigation.navigate("Incidencias", {
-      contract_id: contractId,
-      title: propertyTitle
-    })
-  }
-
-  const openImageViewer = (attachments, index) => {
-    setSelectedAttachments(attachments)
-    setInitialIndex(index)
-    setViewerVisible(true)
-  }
-
-  const handleFilterPress = (urgency, index) => {
-    setFilterUrgency(urgency)
-    if (containerWidth > 0) {
-      const buttonWidth = (containerWidth - 8) / filters.length
-      Animated.timing(slideAnim, {
-        toValue: index * buttonWidth,
-        duration: 250,
-        easing: Easing.out(Easing.cubic),
-        useNativeDriver: true,
-      }).start()
-    }
-  }
-
-  const filteredIncidents = incidents.filter(incident => {
-    if (filterUrgency === "Todos") return true
-    return incident.urgency === filterUrgency
-  })
-
-  // --- NUEVA FUNCIÓN: Extraer fotos de la descripción ---
+  // ✅ FIX: Parseo seguro de datos
   const parseIncidentData = (incident) => {
-    let description = incident.description || "";
+    if (!incident) return { cleanDescription: "", allImages: [] }; 
+
+    let description = incident.description || ""; 
     let extractedImages = [];
 
-    // Buscar marca [FOTOS_ADJUNTAS]
-    if (description.includes("[FOTOS_ADJUNTAS]")) {
+    // Buscar marca [FOTOS_ADJUNTAS] solo si hay descripción
+    if (description && description.includes("[FOTOS_ADJUNTAS]")) {
       const parts = description.split("[FOTOS_ADJUNTAS]");
-      description = parts[0].trim(); // La descripción real limpia
+      description = parts[0].trim();
       
       const urlsPart = parts[1];
       if (urlsPart) {
-        // Separar por saltos de línea y limpiar espacios
         const urls = urlsPart.split('\n').map(u => u.trim()).filter(u => u.length > 0);
         extractedImages = urls.map((url, index) => ({
-          id: `desc_img_${incident.id}_${index}`, // ID único temporal
+          id: `desc_img_${incident.id}_${index}`,
           file_url: url,
-          media_type: 'image/jpeg' // Asumimos imagen
+          media_type: 'image/jpeg'
         }));
       }
     }
 
-    // Combinar con adjuntos que vengan del backend (si hay)
-    const existingAttachments = incident.incident_attachments || [];
-    const allImages = [...existingAttachments, ...extractedImages];
+    // Normalizar adjuntos existentes
+    const existingAttachments = incident.attachments || [];
+    
+    const normalizedExisting = existingAttachments.map((att, i) => {
+      // Si es null o undefined, devolver null para filtrar después
+      if (!att) return null;
+      if (typeof att === 'string') return { id: `exist_${i}`, file_url: att };
+      // Si ya es objeto pero no tiene file_url, intentar recuperarlo o descartar
+      if (typeof att === 'object' && !att.file_url) return null;
+      return att;
+    }).filter(Boolean); // Filtrar nulos
+
+    const allImages = [...normalizedExisting, ...extractedImages];
 
     return {
       cleanDescription: description,
@@ -203,9 +187,10 @@ const IncidenciasListScreen = ({ route, navigation }) => {
   }
 
   const renderIncidentCard = (incident) => {
-    // Usamos la función para obtener datos limpios y todas las fotos
     const { cleanDescription, allImages } = parseIncidentData(incident);
     const hasImages = allImages.length > 0;
+    // ✅ FIX 3: Obtener primera imagen de forma segura
+    const firstImage = hasImages ? allImages[0] : null; 
     
     return (
       <TouchableOpacity 
@@ -230,15 +215,20 @@ const IncidenciasListScreen = ({ route, navigation }) => {
         </Text>
 
         {/* Carrusel de miniaturas */}
-        {hasImages && (
+        {hasImages && firstImage && (
           <View style={styles.attachmentsContainer}>
             <Text style={styles.attachmentLabel}>Adjuntos:</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.thumbnailsScroll}>
               {allImages.map((att, index) => {
-                const imageUrl = getImageUrl(att.file_url)
+                // Protección extra: si att es nulo, saltar
+                if (!att || !att.file_url) return null;
+
+                const imageUrl = getImageUrl(att.file_url);
+                if (!imageUrl) return null; 
+
                 return (
                   <TouchableOpacity 
-                    key={att.id} 
+                    key={att.id || index} 
                     onPress={() => openImageViewer(allImages, index)}
                     style={styles.thumbnailContainer}
                   >
@@ -246,7 +236,6 @@ const IncidenciasListScreen = ({ route, navigation }) => {
                       source={{ uri: imageUrl }} 
                       style={styles.thumbnail} 
                       resizeMode="cover"
-                      onError={(e) => console.log("Error cargando imagen:", imageUrl)}
                     />
                     {/* Overlay para videos o si falla la carga */}
                     {att.media_type?.includes('video') && (

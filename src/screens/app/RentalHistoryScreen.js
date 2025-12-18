@@ -22,11 +22,13 @@ const RentalHistoryScreen = () => {
     })
   }
 
-  const formatCurrency = (value, currency) => {
-    if (!value) return "-"
+  const formatMoney = (value) => {
+    // ✅ FIX: Si value es null/undefined/NaN, mostrar 0
+    if (value === null || value === undefined || isNaN(value)) return "$ 0";
+    
     return new Intl.NumberFormat("es-AR", { 
       style: "currency", 
-      currency: currency || "ARS", 
+      currency: "ARS", 
       maximumFractionDigits: 0 
     }).format(value)
   }
@@ -55,7 +57,7 @@ const RentalHistoryScreen = () => {
         </View>
         <View style={{ alignItems: 'flex-end' }}>
           <Text style={styles.label}>Alquiler final</Text>
-          <Text style={styles.price}>{formatCurrency(item.rent_amount, item.currency)}</Text>
+          <Text style={styles.price}>{formatMoney(item.rent_amount)}</Text>
         </View>
       </View>
     </View>

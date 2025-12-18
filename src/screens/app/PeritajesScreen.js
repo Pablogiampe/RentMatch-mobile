@@ -41,19 +41,16 @@ const PeritajesScreen = ({ navigation }) => {
 
       const data = await response.json()
       
-      if (!response.ok) {
-        throw new Error(data.message || "Error al obtener peritajes")
+      // ✅ FIX: Validar que sea un array antes de mapear
+      if (!Array.isArray(peritajesList)) {
+        console.log("La respuesta no es un array:", peritajesList);
+        setPeritajes([]);
+        return;
       }
 
-      console.log("📦 Peritajes recibidos:", JSON.stringify(data, null, 2))
-
-      // Extraer el array de datos (la respuesta es { success: true, data: [...] })
-      const peritajesList = data.data || []
-
       const mappedData = peritajesList.map(item => ({
-        id: item.id,
-        // Usamos el 'reason' como título principal ya que describe la solicitud
-        property: item.reason || "Solicitud de Peritaje",
+        id: item?.id || Math.random(), // Fallback ID
+        property: item?.reason || "Solicitud de Peritaje",
         // Al no tener dirección, mostramos el ID del contrato recortado
         address: item.contract_id ? `Contrato: ...${item.contract_id.slice(-8)}` : "Sin contrato asociado",
         date: item.date || item.created_at,
