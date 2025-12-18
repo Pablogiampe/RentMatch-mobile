@@ -3,16 +3,18 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      // ✅ Plugin para cargar variables de entorno
+      // ✅ Configuración correcta de react-native-dotenv
       [
-        'inline-dotenv',
+        'module:react-native-dotenv',
         {
-          path: '.env', // Ruta al archivo .env
+          moduleName: '@env',
+          path: '.env',
           safe: false,
-          systemVar: 'overwrite',
+          allowUndefined: false, // ✅ Esto forzará un error si las variables no existen
+          verbose: false,
         },
       ],
-      // Otros plugins...
+      'react-native-reanimated/plugin',
     ],
   }
 }
