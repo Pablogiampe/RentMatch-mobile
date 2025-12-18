@@ -1,16 +1,16 @@
 {
   "expo": {
-    "name": "RentMatch_mobile",
+    "name": "RentMatch",
     "slug": "rentmatch-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./RentMatch_mobile/assets/icon.png",
+    "icon": "./RentMatch_mobile/assets/icono-app.png",
     "backgroundColor": "#FF5A1F",
 
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./RentMatch_mobile/assets/splash-icon.png",
+      "image": "./RentMatch_mobile/assets/RENTMATCH.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },

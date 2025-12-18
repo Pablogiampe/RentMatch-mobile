@@ -10,7 +10,7 @@ export default function AuthStack() {
       screenOptions={{
         headerShown: false,
         contentStyle: {
-          backgroundColor: '#FF5A1F',
+          backgroundColor: '#FF5A1F'
        },
       }}
       

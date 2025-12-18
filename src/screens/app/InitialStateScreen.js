@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useRef, useEffect } from "react"
 import { View, Text, TextInput, StyleSheet, TouchableOpacity, ScrollView, Image, KeyboardAvoidingView, Platform, ActivityIndicator } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"
@@ -7,6 +5,7 @@ import * as ImagePicker from "expo-image-picker"
 import IconComponent from "../../../RentMatch_mobile/assets/icons"
 import { useAuth } from "../../contexts/AuthContext"
 import CustomAlert from "../../components/CustomAlert"
+import { supabase } from "../../services/supabase"
 
 const ORANGE = "#FF5A1F"
 
@@ -89,6 +88,37 @@ const InitialStateScreen = ({ route, navigation }) => {
 
   const removeImage = (id) => setImages((prev) => prev.filter((i) => i.id !== id))
 
+  // --- FUNCIÓN PARA SUBIR A SUPABASE ---
+  const uploadImageToSupabase = async (uri) => {
+    try {
+      const response = await fetch(uri)
+      const arrayBuffer = await response.arrayBuffer()
+      
+      const filename = uri.split('/').pop()
+      const ext = filename.split('.').pop() || 'jpg'
+      // Ruta: initialstate/nombre_archivo
+      const path = `initialstate/${Date.now()}_${Math.random().toString(36).substr(2, 9)}.${ext}`
+
+      const { error } = await supabase.storage
+        .from('mobile') 
+        .upload(path, arrayBuffer, {
+          contentType: `image/${ext === 'png' ? 'png' : 'jpeg'}`,
+          upsert: false
+        })
+
+      if (error) throw error
+
+      const { data } = supabase.storage
+        .from('mobile')
+        .getPublicUrl(path)
+
+      return data.publicUrl
+    } catch (error) {
+      console.error('Error subiendo imagen a Supabase:', error)
+      return null
+    }
+  }
+
   const handleSubmit = async () => {
     if (!contractId) {
       return showAlert("Error", "No se encontró el contrato asociado.")
@@ -100,27 +130,29 @@ const InitialStateScreen = ({ route, navigation }) => {
     setSubmitting(true)
 
     try {
+      // 1. Subir imágenes a Supabase primero
+      let uploadedUrls = []
+      if (images.length > 0) {
+        const uploadPromises = images.map(img => uploadImageToSupabase(img.uri))
+        const results = await Promise.all(uploadPromises)
+        uploadedUrls = results.filter(url => url !== null)
+      }
+
+      // 2. Preparar descripción concatenando las URLs
+      let finalDescription = description
+      if (uploadedUrls.length > 0) {
+        finalDescription += `\n\n[FOTOS_ADJUNTAS]\n${uploadedUrls.join('\n')}`
+      }
+
       const formData = new FormData()
       formData.append("contract_id", String(contractId))
       
       formData.append("title", "Estado Inicial")
-      formData.append("description", description)
+      formData.append("description", finalDescription)
       formData.append("room", "General")
       formData.append("state", "media")
 
-      images.forEach((img) => {
-        const filename = img.uri.split('/').pop()
-        const match = /\.(\w+)$/.exec(filename)
-        const type = match ? `image/${match[1]}` : `image/jpeg`
-        
-        formData.append('images', {
-          uri: img.uri,
-          name: filename,
-          type,
-        })
-      })
-
-      console.log("🚀 Enviando estado inicial...", { contractId, imagesCount: images.length })
+      console.log("🚀 Enviando estado inicial...", { contractId, imagesCount: uploadedUrls.length })
 
       const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-Inicial/inicialState", {
         method: "POST",

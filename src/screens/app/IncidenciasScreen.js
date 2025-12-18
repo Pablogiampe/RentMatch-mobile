@@ -1,5 +1,3 @@
-"use client"
-
 import { useEffect, useState } from "react"
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, TextInput, KeyboardAvoidingView, Platform, ActivityIndicator, Image } from "react-native"
 import { responsiveHeight, responsiveWidth, responsiveFontSize } from "react-native-responsive-dimensions"

@@ -296,24 +296,46 @@ const HomeScreen= () => {
   // const rentalsToShow = activeTab === "active" ? activeRentals : rentalHistory // ELIMINADO
 
   // Función auxiliar para navegar con el contexto del alquiler seleccionado
-  const handleAction = (screenName) => {
+  const handleAction = async (screenName) => {
     if (!selectedRental) {
       showAlert("Selección requerida", "Por favor, selecciona un alquiler activo arriba para continuar.")
       return
     }
     
-    // 👇 AQUÍ es donde se define el parámetro del contrato
     const contractId = selectedRental.contract_id || selectedRental.id
     const title = selectedRental.property_type 
       ? `${capitalize(selectedRental.property_type)}` 
       : "Propiedad"
 
-    console.log(`🚀 Navegando a ${screenName} con contrato: ${contractId}`)
+    // --- LÓGICA NUEVA PARA INITIAL STATE ---
+    if (screenName === "InitialState") {
+      // ⚠️ Si no tienes "const [loading, setLoading] = useState(false)" definido arriba, comenta estas líneas:
+      // setLoading(true) 
+      
+      const existingState = await checkInitialState(contractId)
+      
+      // setLoading(false)
 
-    navigation.navigate(screenName, { 
+      if (existingState) {
+        // Si ya existe, vamos al detalle
+        navigation.navigate("InitialStateDetail", {
+          initialState: existingState,
+        })
+      } else {
+        // ✅ ESTO FALTABA: Si no existe, navegar al formulario de creación
+        navigation.navigate("InitialState", {
+          contract_id: contractId,
+          title: title,
+          rentalData: selectedRental
+        })
+      }
+      return // Importante: detener la ejecución aquí
+    }
+
+    navigation.navigate(screenName, {
       contract_id: contractId,
       title: title,
-      rentalData: selectedRental // Pasamos todo el objeto por si acaso
+      rentalData: selectedRental
     })
   }
 
@@ -336,6 +358,41 @@ const HomeScreen= () => {
     if (rental && (!selectedRental || (rental.contract_id !== selectedRental.contract_id && rental.id !== selectedRental.id))) {
       console.log("🔄 Cambio de alquiler seleccionado:", rental.address || "Sin dirección") // <--- LOG PARA VERIFICAR
       setSelectedRental(rental)
+    }
+  }
+
+  const checkInitialState = async (contractId) => {
+    try {
+      const activeToken = token || session
+      const response = await fetch("https://rentmatch-backend.onrender.com/api/mobile-Inicial/InicialState", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${activeToken}`
+        },
+      })
+
+      const data = await response.json()
+            console.log("Error verificando estado inicial:", data)
+
+      // Si devuelve datos y success es true
+      if (response.ok && data.success && Array.isArray(data.data)) {
+        // 1. Filtrar por el contrato actual (por seguridad, aunque el backend debería hacerlo)
+        const contractStates = data.data.filter(item => item.contract_id === contractId)
+        
+        if (contractStates.length > 0) {
+          // 2. Ordenar por fecha de creación descendente (el más nuevo primero)
+          // Asumimos que created_at viene en formato ISO o compatible
+          contractStates.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          
+          // 3. Devolver el último registro (el más reciente)
+          return contractStates[0]
+        }
+      }
+      return null
+    } catch (error) {
+      console.log("Error verificando estado inicial:", error)
+      return null
     }
   }
 
@@ -373,14 +430,14 @@ const HomeScreen= () => {
             <View style={[styles.menuRow, { gap: responsiveWidth(25) }]}>
               <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("IncidenciasList")}>
                 <View style={styles.menuIconContainer}>
-                  <IconComponent name="calendar" style={styles.menuIcon} />
+                  <IconComponent name="calendar" width={39} height={39} />
                 </View>
                 <Text style={styles.menuItemText}>Incidencias</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("Peritajes")}>
                 <View style={styles.menuIconContainer}>
-                  <IconComponent name="inspection" style={styles.menuIcon} />
+                  <IconComponent name="inspection" width={38} height={38} style={styles.menuIcon} />
                 </View>
                 <Text style={styles.menuItemText}>Peritaje</Text>
               </TouchableOpacity>
@@ -390,7 +447,7 @@ const HomeScreen= () => {
             <View style={[styles.menuRow, { gap: responsiveWidth(8) }]}>
               <TouchableOpacity style={styles.menuItem} onPress={() => handleAction("InitialState")}>
                 <View style={styles.menuIconContainer}>
-                  <IconComponent name="form-icon" style={styles.menuIcon} />
+                  <IconComponent name="form-icon" width={38} height={38} style={styles.menuIcon} />
                 </View>
                 <Text style={styles.menuItemText}>Estado{"\n"}inicial</Text>
               </TouchableOpacity>
@@ -408,7 +465,7 @@ const HomeScreen= () => {
                 }}
               >
                 <View style={[styles.menuIconContainer, !finalStateStatus.enabled && { backgroundColor: '#E5E7EB' }]}>
-                  <IconComponent name="home" style={[styles.menuIcon, !finalStateStatus.enabled && { color: '#9CA3AF' }]} />
+                  <IconComponent name="home" width={38} height={38} style={[styles.menuIcon, !finalStateStatus.enabled && { color: '#9CA3AF' }]} />
                 </View>
                 <Text style={styles.menuItemText}>Estado{"\n"}final</Text>
               </TouchableOpacity>
@@ -637,21 +694,21 @@ const HomeScreen= () => {
           <View style={styles.optionsGrid}>
             <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("IncidenciasList")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFE3E3" }}>
-                <IconComponent name="calendar" />
+                <IconComponent name="calendar" width={33} height={33} />
               </View>
               <Text style={styles.optionTitle}>Incidencias</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("InitialState")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#E6E8FF" }}>
-                <IconComponent name="home" />
+                <IconComponent name="home" width={38} height={38} />
               </View>
               <Text style={styles.optionTitle}>Estado inicial</Text>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.optionCard} onPress={() => handleAction("Peritajes")}>
               <View style={{ ...styles.iconContainer, backgroundColor: "#FFF2CC" }}>
-                <IconComponent name="inspection" />
+                <IconComponent name="inspection" width={35} height={35} />
               </View>
               <Text style={styles.optionTitle}>Peritajes</Text>
             </TouchableOpacity>
@@ -672,7 +729,7 @@ const HomeScreen= () => {
               }}
             >
               <View style={{ ...styles.iconContainer, backgroundColor: finalStateStatus.enabled ? "#DCFCE7" : "#E5E7EB" }}>
-                <IconComponent name="form-icon" style={!finalStateStatus.enabled ? { color: "#9CA3AF" } : {}} />
+                <IconComponent name="form-icon" width={32} height={32} style={!finalStateStatus.enabled ? { color: "#9CA3AF" } : {}} />
               </View>
               <Text style={[styles.optionTitle, !finalStateStatus.enabled && { color: "#9CA3AF" }]}>Estado Final</Text>
               <Text style={[styles.optionSubtitle, !finalStateStatus.enabled && { color: "#9CA3AF", fontSize: responsiveFontSize(1.4) }]}>
@@ -839,7 +896,8 @@ const styles = StyleSheet.create({
   },
   menuIcon: {
     color: "#FF5A1F",
-    fontSize: responsiveFontSize(3.8), // Icono más grande (antes 3)
+    fontSize: responsiveFontSize(3.8),
+     // Icono más grande (antes 3)
   },
   menuItemText: {
     color: "#fff",

@@ -5,6 +5,7 @@ import PeritajeScreen from "../screens/app/PeritajeScreen"
 import FinalStateScreen from "../screens/app/FinalStateScreen"
 import InitialStateScreen from "../screens/app/InitialStateScreen"
 import RentalHistoryScreen from "../screens/app/RentalHistoryScreen"
+import InitialStateDetailScreen from "../screens/app/InitialStateDetailScreen"
 import IncidenciasScreen from "../screens/app/IncidenciasScreen"
 import ProfileScreen from "../screens/app/ProfileScreen"
 import PeritajesScreen from "../screens/app/PeritajesScreen"
@@ -29,6 +30,7 @@ export default function AppStack() {
         <Stack.Screen name="Peritaje" component={PeritajeScreen} />
         <Stack.Screen name="FinalState" component={FinalStateScreen} />
         <Stack.Screen name="InitialState" component={InitialStateScreen} />
+        <Stack.Screen name="InitialStateDetail" component={InitialStateDetailScreen} />
         <Stack.Screen name="Incidencias" component={IncidenciasScreen} />
         <Stack.Screen name="IncidenciasList" component={IncidenciasListScreen} />
         <Stack.Screen name="Peritajes" component={PeritajesScreen} />
