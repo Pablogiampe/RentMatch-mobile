@@ -18,9 +18,15 @@
       "supportsTablet": true
     },
     "android": {
+            "icon": "./RentMatch_mobile/assets/icono-app.png",
       "adaptiveIcon": {
-        "foregroundImage": "./RentMatch_mobile/assets/adaptive-icon.png",
+        "foregroundImage": "./RentMatch_mobile/assets/icono-app.png",
         "backgroundColor": "#ffffff"
+      },
+       "splash": {
+        "image": "./RentMatch_mobile/assets/RENTMATCH.png",
+        "resizeMode": "contain",
+        "backgroundColor": "#006f7a"
       },
       "package": "com.rentmatchmobile"
     },

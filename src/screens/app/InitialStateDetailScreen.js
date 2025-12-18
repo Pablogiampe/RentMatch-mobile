@@ -41,10 +41,11 @@ const InitialStateDetailScreen = ({ route, navigation }) => {
   }
 
   const getImageUrl = (fileUrl) => {
-    if (!fileUrl) return null
+    // ✅ FIX: Validación robusta para evitar crash si fileUrl es null, undefined o no es texto
+    if (!fileUrl || typeof fileUrl !== 'string') return null
+    
     if (fileUrl.startsWith('http')) return fileUrl
     // Si viene solo el nombre del archivo, construimos la URL de Supabase
-    // URL base: https://tyheaqrxtccgvsrcqkqt.supabase.co/storage/v1/object/public/mobile/initialstate/
     return `https://tyheaqrxtccgvsrcqkqt.supabase.co/storage/v1/object/public/mobile/initialstate/${fileUrl}`
   }
 
@@ -75,7 +76,7 @@ const InitialStateDetailScreen = ({ route, navigation }) => {
     const normalizedExisting = existingAttachments.map((att, i) => {
       if (typeof att === 'string') return { id: `exist_${i}`, file_url: att };
       return att;
-    });
+    }).filter(item => item && item.file_url); // ✅ FIX: Filtrar nulos para evitar crash en el render
 
     const allImages = [...normalizedExisting, ...extractedImages];
 
@@ -130,7 +131,11 @@ const InitialStateDetailScreen = ({ route, navigation }) => {
                 { useNativeDriver: false }
               )}
               scrollEventThrottle={16}
-              renderItem={({ item, index }) => (
+              renderItem={({ item, index }) => {
+                // ✅ FIX: Protección extra por si el item llega vacío
+                if (!item || !item.file_url) return null; 
+                
+                return (
                 <TouchableOpacity 
                   style={styles.carouselItem}
                   onPress={() => openImageViewer(index)}
@@ -145,7 +150,7 @@ const InitialStateDetailScreen = ({ route, navigation }) => {
                     <Text style={styles.imageIndexText}>{index + 1}/{allImages.length}</Text>
                   </View>
                 </TouchableOpacity>
-              )}
+              )}}
             />
             
             {/* Indicadores de Paginación (Dots) */}
